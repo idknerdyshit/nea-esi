@@ -5,8 +5,9 @@ use std::sync::Arc;
 use tracing::debug;
 
 use crate::{
-    EsiAllianceInfo, EsiCharacterInfo, EsiClient, EsiCorporationInfo, EsiError, EsiKillmail,
-    EsiMarketHistoryEntry, EsiMarketOrder, Result, BASE_URL,
+    EsiAllianceInfo, EsiAssetItem, EsiCharacterInfo, EsiClient, EsiCorporationInfo, EsiError,
+    EsiKillmail, EsiMarketHistoryEntry, EsiMarketOrder, EsiMarketPrice, EsiResolvedName,
+    EsiStructureInfo, Result, BASE_URL,
 };
 
 impl EsiClient {
@@ -189,6 +190,114 @@ impl EsiClient {
             .map_err(|e| EsiError::Deserialize(e.to_string()))?;
         debug!(alliance_id, name = %info.name, "get_alliance complete");
         Ok(info)
+    }
+
+    // -----------------------------------------------------------------------
+    // Character assets endpoint (authenticated, paginated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch all assets for a character, handling pagination.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_assets(&self, character_id: i64) -> Result<Vec<EsiAssetItem>> {
+        let base_url = format!("{}/characters/{}/assets/", BASE_URL, character_id);
+
+        let first_url = format!("{}?page=1", base_url);
+        let resp = self.request(&first_url).await?;
+
+        let total_pages: i32 = resp
+            .headers()
+            .get("x-pages")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(1);
+
+        let mut items: Vec<EsiAssetItem> = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+
+        if total_pages > 1 {
+            let mut handles = Vec::with_capacity((total_pages - 1) as usize);
+            for page in 2..=total_pages {
+                let url = format!("{}?page={}", base_url, page);
+                let this = Self {
+                    client: self.client.clone(),
+                    semaphore: Arc::clone(&self.semaphore),
+                    error_budget: Arc::clone(&self.error_budget),
+                    tokens: Arc::clone(&self.tokens),
+                    app_credentials: self.app_credentials.clone(),
+                };
+                handles.push(tokio::spawn(async move {
+                    let resp = this.request(&url).await?;
+                    let page_items: Vec<EsiAssetItem> = resp
+                        .json()
+                        .await
+                        .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+                    Ok::<_, EsiError>(page_items)
+                }));
+            }
+
+            for handle in handles {
+                let page_items = handle
+                    .await
+                    .map_err(|e| EsiError::Deserialize(e.to_string()))??;
+                items.extend(page_items);
+            }
+        }
+
+        debug!(pages = total_pages, total_items = items.len(), "character_assets complete");
+        Ok(items)
+    }
+
+    // -----------------------------------------------------------------------
+    // Universe names endpoint (public, POST)
+    // -----------------------------------------------------------------------
+
+    /// Resolve a set of IDs to names and categories.
+    #[tracing::instrument(skip(self, ids))]
+    pub async fn resolve_names(&self, ids: &[i64]) -> Result<Vec<EsiResolvedName>> {
+        let url = format!("{}/universe/names/", BASE_URL);
+        let resp = self.request_post(&url, &ids).await?;
+        let names: Vec<EsiResolvedName> = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!(count = names.len(), "resolve_names complete");
+        Ok(names)
+    }
+
+    // -----------------------------------------------------------------------
+    // Structure endpoint (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch info about a player-owned structure.
+    #[tracing::instrument(skip(self))]
+    pub async fn get_structure(&self, structure_id: i64) -> Result<EsiStructureInfo> {
+        let url = format!("{}/universe/structures/{}/", BASE_URL, structure_id);
+        let resp = self.request(&url).await?;
+        let info: EsiStructureInfo = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!(structure_id, name = %info.name, "get_structure complete");
+        Ok(info)
+    }
+
+    // -----------------------------------------------------------------------
+    // Market prices endpoint (public)
+    // -----------------------------------------------------------------------
+
+    /// Fetch global average and adjusted prices for all types.
+    #[tracing::instrument(skip(self))]
+    pub async fn market_prices(&self) -> Result<Vec<EsiMarketPrice>> {
+        let url = format!("{}/markets/prices/", BASE_URL);
+        let resp = self.request(&url).await?;
+        let prices: Vec<EsiMarketPrice> = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!(count = prices.len(), "market_prices complete");
+        Ok(prices)
     }
 
     // -----------------------------------------------------------------------

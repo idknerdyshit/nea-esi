@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use reqwest::header::{HeaderMap, HeaderValue, USER_AGENT as USER_AGENT_HEADER};
 use secrecy::{ExposeSecret, SecretString};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::{debug, warn};
 
@@ -166,6 +166,51 @@ pub struct EsiMarketOrder {
     pub duration: i32,
     pub min_volume: i32,
     pub range: String,
+}
+
+/// A single item in a character's asset list.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiAssetItem {
+    pub item_id: i64,
+    pub type_id: i32,
+    pub location_id: i64,
+    pub location_type: String,
+    pub location_flag: String,
+    pub quantity: i32,
+    #[serde(default)]
+    pub is_singleton: bool,
+    #[serde(default)]
+    pub is_blueprint_copy: Option<bool>,
+}
+
+/// Resolved name from POST /universe/names/.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiResolvedName {
+    pub id: i64,
+    pub name: String,
+    pub category: String,
+}
+
+/// Player-owned structure info.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiStructureInfo {
+    pub name: String,
+    #[serde(default)]
+    pub owner_id: i64,
+    #[serde(default)]
+    pub solar_system_id: i32,
+    #[serde(default)]
+    pub type_id: Option<i32>,
+}
+
+/// Global average/adjusted price for a type.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiMarketPrice {
+    pub type_id: i32,
+    #[serde(default)]
+    pub average_price: Option<f64>,
+    #[serde(default)]
+    pub adjusted_price: Option<f64>,
 }
 
 // ---------------------------------------------------------------------------
@@ -348,6 +393,105 @@ impl EsiClient {
             elapsed_ms = start.elapsed().as_millis() as u64,
             error_budget = self.error_budget.load(Ordering::Relaxed),
             "ESI request"
+        );
+
+        Ok(response)
+    }
+
+    /// Make a rate-limited POST request with a JSON body.
+    ///
+    /// Same flow as `request()`: semaphore acquire, budget check, optional
+    /// bearer auth, error budget update, and 401 retry.
+    pub async fn request_post(
+        &self,
+        url: &str,
+        body: &impl Serialize,
+    ) -> Result<reqwest::Response> {
+        let _permit = self
+            .semaphore
+            .acquire()
+            .await
+            .map_err(|_| EsiError::Internal("rate-limit semaphore closed".into()))?;
+
+        let budget = self.error_budget.load(Ordering::Relaxed);
+        if budget < 20 {
+            warn!(
+                budget,
+                "ESI error budget low – adding 1 s delay before request"
+            );
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+
+        if self.error_budget.load(Ordering::Relaxed) <= 0 {
+            return Err(EsiError::RateLimited);
+        }
+
+        let token = self.ensure_valid_token().await?;
+
+        let start = std::time::Instant::now();
+        let mut req = self.client.post(url).json(body);
+        if let Some(ref tok) = token {
+            req = req.bearer_auth(tok.expose_secret());
+        }
+        let response = req.send().await?;
+
+        if let Some(val) = response.headers().get("x-esi-error-limit-remain") {
+            if let Ok(s) = val.to_str() {
+                if let Ok(remain) = s.parse::<i32>() {
+                    self.error_budget.store(remain, Ordering::Relaxed);
+                }
+            }
+        }
+
+        if response.status().as_u16() == 401 && token.is_some() {
+            debug!("got 401 on POST, attempting token refresh and retry");
+            let refreshed = self.refresh_token().await?;
+            let retry_resp = self
+                .client
+                .post(url)
+                .json(body)
+                .bearer_auth(refreshed.access_token.expose_secret())
+                .send()
+                .await?;
+
+            if let Some(val) = retry_resp.headers().get("x-esi-error-limit-remain") {
+                if let Ok(s) = val.to_str() {
+                    if let Ok(remain) = s.parse::<i32>() {
+                        self.error_budget.store(remain, Ordering::Relaxed);
+                    }
+                }
+            }
+
+            if !retry_resp.status().is_success() {
+                let status = retry_resp.status().as_u16();
+                let message = retry_resp.text().await.unwrap_or_default();
+                warn!(url, status, "ESI API error after token refresh retry (POST)");
+                return Err(EsiError::Api { status, message });
+            }
+
+            debug!(
+                url,
+                status = retry_resp.status().as_u16(),
+                elapsed_ms = start.elapsed().as_millis() as u64,
+                "ESI POST request (after 401 retry)"
+            );
+
+            return Ok(retry_resp);
+        }
+
+        if !response.status().is_success() {
+            let status = response.status().as_u16();
+            let message = response.text().await.unwrap_or_default();
+            warn!(url, status, "ESI API error (POST)");
+            return Err(EsiError::Api { status, message });
+        }
+
+        debug!(
+            url,
+            status = response.status().as_u16(),
+            elapsed_ms = start.elapsed().as_millis() as u64,
+            error_budget = self.error_budget.load(Ordering::Relaxed),
+            "ESI POST request"
         );
 
         Ok(response)
@@ -549,6 +693,62 @@ mod tests {
         assert!((entry.average - 5.25).abs() < f64::EPSILON);
         assert_eq!(entry.volume, 72016862);
         assert_eq!(entry.order_count, 2267);
+    }
+
+    #[test]
+    fn test_deserialize_esi_asset_item() {
+        let json = r#"{
+            "item_id": 1234567890,
+            "type_id": 587,
+            "location_id": 60003760,
+            "location_type": "station",
+            "location_flag": "Hangar",
+            "quantity": 1,
+            "is_singleton": true,
+            "is_blueprint_copy": null
+        }"#;
+        let item: EsiAssetItem = serde_json::from_str(json).unwrap();
+        assert_eq!(item.item_id, 1234567890);
+        assert_eq!(item.type_id, 587);
+        assert_eq!(item.location_id, 60003760);
+        assert_eq!(item.location_type, "station");
+        assert_eq!(item.location_flag, "Hangar");
+        assert_eq!(item.quantity, 1);
+        assert!(item.is_singleton);
+        assert_eq!(item.is_blueprint_copy, None);
+    }
+
+    #[test]
+    fn test_deserialize_esi_resolved_name() {
+        let json = r#"{"id": 95465499, "name": "CCP Bartender", "category": "character"}"#;
+        let name: EsiResolvedName = serde_json::from_str(json).unwrap();
+        assert_eq!(name.id, 95465499);
+        assert_eq!(name.name, "CCP Bartender");
+        assert_eq!(name.category, "character");
+    }
+
+    #[test]
+    fn test_deserialize_esi_structure_info() {
+        let json = r#"{
+            "name": "My Citadel",
+            "owner_id": 98000001,
+            "solar_system_id": 30000142,
+            "type_id": 35832
+        }"#;
+        let info: EsiStructureInfo = serde_json::from_str(json).unwrap();
+        assert_eq!(info.name, "My Citadel");
+        assert_eq!(info.owner_id, 98000001);
+        assert_eq!(info.solar_system_id, 30000142);
+        assert_eq!(info.type_id, Some(35832));
+    }
+
+    #[test]
+    fn test_deserialize_esi_market_price() {
+        let json = r#"{"type_id": 34, "average_price": 5.25}"#;
+        let price: EsiMarketPrice = serde_json::from_str(json).unwrap();
+        assert_eq!(price.type_id, 34);
+        assert!((price.average_price.unwrap() - 5.25).abs() < f64::EPSILON);
+        assert_eq!(price.adjusted_price, None);
     }
 
     #[test]
