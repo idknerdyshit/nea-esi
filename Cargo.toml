@@ -1,0 +1,19 @@
+[package]
+name = "nea-esi"
+version = "0.1.0"
+edition = "2024"
+description = "Rate-limited Rust client for EVE Online's ESI (EVE Swagger Interface) API"
+license = "MIT"
+repository = "https://github.com/idknerdyshit/nea-esi"
+keywords = ["eve-online", "esi", "api-client", "eve"]
+categories = ["api-bindings", "games"]
+readme = "README.md"
+
+[dependencies]
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+thiserror = "2"
