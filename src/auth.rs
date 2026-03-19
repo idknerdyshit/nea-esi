@@ -82,7 +82,7 @@ impl EsiTokens {
 
 /// Generate a random 128-byte code verifier, base64url-encoded (no padding).
 fn generate_code_verifier() -> SecretString {
-    use rand::Rng;
+    use rand::RngExt;
     let random_bytes: Vec<u8> = (0..96).map(|_| rand::rng().random::<u8>()).collect();
     base64_url_encode(&random_bytes).into()
 }
@@ -95,7 +95,7 @@ fn compute_code_challenge(verifier: &str) -> String {
 
 /// Generate a random state parameter.
 fn generate_state() -> String {
-    use rand::Rng;
+    use rand::RngExt;
     let bytes: Vec<u8> = (0..32).map(|_| rand::rng().random::<u8>()).collect();
     base64_url_encode(&bytes)
 }

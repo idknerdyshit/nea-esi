@@ -10,14 +10,14 @@ categories = ["api-bindings", "games"]
 readme = "README.md"
 
 [dependencies]
-reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+reqwest = { version = "0.13", features = ["json", "rustls", "form"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 chrono = { version = "0.4", features = ["serde"] }
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 thiserror = "2"
-rand = "0.9"
+rand = "0.10"
 sha2 = "0.10"
 base64 = "0.22"
 url = "2"
