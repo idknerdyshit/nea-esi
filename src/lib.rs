@@ -753,51 +753,16 @@ impl EsiClient {
         }
     }
 
+    // -----------------------------------------------------------------------
+    // Pagination
+    // -----------------------------------------------------------------------
+
     /// Fetch all pages of a paginated GET endpoint and flatten into one Vec.
     pub async fn get_paginated<T: DeserializeOwned + Send + 'static>(
         &self,
         base_url: &str,
     ) -> Result<Vec<T>> {
-        let separator = if base_url.contains('?') { '&' } else { '?' };
-        let first_url = format!("{}{}page=1", base_url, separator);
-        let resp = self.request(&first_url).await?;
-
-        let total_pages: i32 = resp
-            .headers()
-            .get("x-pages")
-            .and_then(|v| v.to_str().ok())
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(1);
-
-        let mut items: Vec<T> = resp
-            .json()
-            .await
-            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
-
-        if total_pages > 1 {
-            let mut handles = Vec::with_capacity((total_pages - 1) as usize);
-            for page in 2..=total_pages {
-                let url = format!("{}{}page={}", base_url, separator, page);
-                let this = self.clone_shared();
-                handles.push(tokio::spawn(async move {
-                    let resp = this.request(&url).await?;
-                    let page_items: Vec<T> = resp
-                        .json()
-                        .await
-                        .map_err(|e| EsiError::Deserialize(e.to_string()))?;
-                    Ok::<_, EsiError>(page_items)
-                }));
-            }
-
-            for handle in handles {
-                let page_items = handle
-                    .await
-                    .map_err(|e| EsiError::Deserialize(e.to_string()))??;
-                items.extend(page_items);
-            }
-        }
-
-        Ok(items)
+        self.paginated_fetch(base_url, PageFetcher::Get).await
     }
 
     /// Fetch all pages of a paginated POST endpoint and flatten into one Vec.
@@ -812,10 +777,23 @@ impl EsiClient {
     {
         let body_value = serde_json::to_value(body)
             .map_err(|e| EsiError::Internal(format!("failed to serialize body: {}", e)))?;
+        self.paginated_fetch(base_url, PageFetcher::Post(Arc::new(body_value)))
+            .await
+    }
 
+    /// Shared pagination logic for both GET and POST.
+    async fn paginated_fetch<T: DeserializeOwned + Send + 'static>(
+        &self,
+        base_url: &str,
+        fetcher: PageFetcher,
+    ) -> Result<Vec<T>> {
         let separator = if base_url.contains('?') { '&' } else { '?' };
         let first_url = format!("{}{}page=1", base_url, separator);
-        let resp = self.request_post(&first_url, &body_value).await?;
+
+        let resp = match &fetcher {
+            PageFetcher::Get => self.request(&first_url).await?,
+            PageFetcher::Post(body) => self.request_post(&first_url, body.as_ref()).await?,
+        };
 
         let total_pages: i32 = resp
             .headers()
@@ -830,14 +808,18 @@ impl EsiClient {
             .map_err(|e| EsiError::Deserialize(e.to_string()))?;
 
         if total_pages > 1 {
-            let body_value = Arc::new(body_value);
             let mut handles = Vec::with_capacity((total_pages - 1) as usize);
             for page in 2..=total_pages {
                 let url = format!("{}{}page={}", base_url, separator, page);
                 let this = self.clone_shared();
-                let bv = Arc::clone(&body_value);
+                let fetcher = fetcher.clone();
                 handles.push(tokio::spawn(async move {
-                    let resp = this.request_post(&url, bv.as_ref()).await?;
+                    let resp = match &fetcher {
+                        PageFetcher::Get => this.request(&url).await?,
+                        PageFetcher::Post(body) => {
+                            this.request_post(&url, body.as_ref()).await?
+                        }
+                    };
                     let page_items: Vec<T> = resp
                         .json()
                         .await
@@ -857,12 +839,14 @@ impl EsiClient {
         Ok(items)
     }
 
+    // -----------------------------------------------------------------------
+    // ETag caching
+    // -----------------------------------------------------------------------
+
     /// Make a GET request with ETag caching support.
     ///
-    /// If the cache is enabled and contains a prior response for this URL,
-    /// sends `If-None-Match`. On 304, returns the cached body. On 200,
-    /// caches the response. If caching is not enabled, behaves like
-    /// `request().bytes()`.
+    /// Uses `execute_request` internally for retry/401 handling. On 304,
+    /// returns the cached body. On 200, caches the response.
     pub async fn request_cached(&self, url: &str) -> Result<Vec<u8>> {
         let cached_etag = if let Some(ref cache) = self.cache {
             let guard = cache.read().await;
@@ -871,32 +855,19 @@ impl EsiClient {
             None
         };
 
-        let _permit = self
-            .semaphore
-            .acquire()
-            .await
-            .map_err(|_| EsiError::Internal("rate-limit semaphore closed".into()))?;
+        let etag_clone = cached_etag.clone();
+        let result = self
+            .execute_request(url, move |client, url| {
+                let mut req = client.get(url);
+                if let Some(ref etag) = etag_clone {
+                    req = req.header("If-None-Match", etag.as_str());
+                }
+                req
+            })
+            .await;
 
-        self.wait_for_budget_reset().await;
-
-        if self.error_budget.load(Ordering::Relaxed) <= 0 {
-            return Err(EsiError::RateLimited);
-        }
-
-        let token = self.ensure_valid_token().await?;
-
-        let mut req = self.client.get(url);
-        if let Some(ref tok) = token {
-            req = req.bearer_auth(tok.expose_secret());
-        }
-        if let Some(ref etag) = cached_etag {
-            req = req.header("If-None-Match", etag.as_str());
-        }
-
-        let response = req.send().await?;
-        self.update_error_budget(response.headers());
-
-        if response.status().as_u16() == 304
+        // Handle 304 Not Modified by returning cached body.
+        if let Err(EsiError::Api { status: 304, .. }) = &result
             && let Some(ref cache) = self.cache
         {
             let guard = cache.read().await;
@@ -906,11 +877,7 @@ impl EsiClient {
             }
         }
 
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let message = response.text().await.unwrap_or_default();
-            return Err(EsiError::Api { status, message });
-        }
+        let response = result?;
 
         let etag = response
             .headers()
@@ -918,11 +885,7 @@ impl EsiClient {
             .and_then(|v| v.to_str().ok())
             .map(String::from);
 
-        let body = response
-            .bytes()
-            .await
-            .map_err(EsiError::Http)?
-            .to_vec();
+        let body = response.bytes().await.map_err(EsiError::Http)?.to_vec();
 
         if let (Some(cache), Some(etag)) = (&self.cache, etag) {
             let mut guard = cache.write().await;
@@ -939,41 +902,37 @@ impl EsiClient {
     }
 
     // -----------------------------------------------------------------------
-    // Core request helper
+    // Core request helpers
     // -----------------------------------------------------------------------
 
-    /// Make a rate-limited GET request to the given URL.
-    ///
-    /// Acquires a semaphore permit (max 20 concurrent), performs the request,
-    /// reads the `X-ESI-Error-Limit-Remain` header to update the error budget,
-    /// and returns the response. If OAuth tokens are configured, attaches a
-    /// Bearer header automatically. On 401, attempts one token refresh and retry.
-    pub async fn request(&self, url: &str) -> Result<reqwest::Response> {
+    /// Unified request executor with semaphore, budget check, auth, retry
+    /// (502-504 and network errors), and 401 token refresh.
+    async fn execute_request(
+        &self,
+        url: &str,
+        build_request: impl Fn(&reqwest::Client, &str) -> reqwest::RequestBuilder,
+    ) -> Result<reqwest::Response> {
         let _permit = self
             .semaphore
             .acquire()
             .await
             .map_err(|_| EsiError::Internal("rate-limit semaphore closed".into()))?;
 
-        // If the error budget is very low, wait for the reset window.
         self.wait_for_budget_reset().await;
 
-        // If budget is zero we refuse to make the call.
         if self.error_budget.load(Ordering::Relaxed) <= 0 {
             return Err(EsiError::RateLimited);
         }
 
-        // Get a valid token if we have one.
         let token = self.ensure_valid_token().await?;
-
         let start = std::time::Instant::now();
 
-        // Retry loop for transient 502/503/504 errors.
+        // Retry loop for transient 502/503/504 errors and network errors.
         let response = {
             let mut last_err = None;
             let mut resp = None;
             for attempt in 0..=MAX_RETRIES {
-                let mut req = self.client.get(url);
+                let mut req = build_request(&self.client, url);
                 if let Some(ref tok) = token {
                     req = req.bearer_auth(tok.expose_secret());
                 }
@@ -992,6 +951,13 @@ impl EsiClient {
                         break;
                     }
                     Err(e) => {
+                        if attempt < MAX_RETRIES {
+                            let jitter = rand::rng().random_range(0..500);
+                            let delay = RETRY_BASE_MS * 2u64.pow(attempt) + jitter;
+                            warn!(url, attempt, delay_ms = delay, error = %e, "retrying network error");
+                            tokio::time::sleep(Duration::from_millis(delay)).await;
+                            continue;
+                        }
                         last_err = Some(e);
                         break;
                     }
@@ -1007,9 +973,7 @@ impl EsiClient {
         if response.status().as_u16() == 401 && token.is_some() {
             debug!("got 401, attempting token refresh and retry");
             let refreshed = self.refresh_token().await?;
-            let retry_resp = self
-                .client
-                .get(url)
+            let retry_resp = build_request(&self.client, url)
                 .bearer_auth(refreshed.access_token.expose_secret())
                 .send()
                 .await?;
@@ -1033,7 +997,6 @@ impl EsiClient {
             return Ok(retry_resp);
         }
 
-        // If the response is an error status, return an Api error.
         if !response.status().is_success() {
             let status = response.status().as_u16();
             let message = response.text().await.unwrap_or_default();
@@ -1052,117 +1015,30 @@ impl EsiClient {
         Ok(response)
     }
 
+    /// Make a rate-limited GET request to the given URL.
+    pub async fn request(&self, url: &str) -> Result<reqwest::Response> {
+        self.execute_request(url, |client, url| client.get(url))
+            .await
+    }
+
     /// Make a rate-limited POST request with a JSON body.
-    ///
-    /// Same flow as `request()`: semaphore acquire, budget check, optional
-    /// bearer auth, error budget update, and 401 retry.
     pub async fn request_post(
         &self,
         url: &str,
         body: &impl Serialize,
     ) -> Result<reqwest::Response> {
-        let _permit = self
-            .semaphore
-            .acquire()
-            .await
-            .map_err(|_| EsiError::Internal("rate-limit semaphore closed".into()))?;
-
-        self.wait_for_budget_reset().await;
-
-        if self.error_budget.load(Ordering::Relaxed) <= 0 {
-            return Err(EsiError::RateLimited);
-        }
-
-        let token = self.ensure_valid_token().await?;
-
-        let start = std::time::Instant::now();
-
-        // Pre-serialize body so we can retry without re-borrowing.
         let body_value = serde_json::to_value(body)
             .map_err(|e| EsiError::Internal(format!("failed to serialize body: {}", e)))?;
-
-        // Retry loop for transient 502/503/504 errors.
-        let response = {
-            let mut last_err = None;
-            let mut resp = None;
-            for attempt in 0..=MAX_RETRIES {
-                let mut req = self.client.post(url).json(&body_value);
-                if let Some(ref tok) = token {
-                    req = req.bearer_auth(tok.expose_secret());
-                }
-                match req.send().await {
-                    Ok(r) => {
-                        self.update_error_budget(r.headers());
-                        let status = r.status().as_u16();
-                        if matches!(status, 502..=504) && attempt < MAX_RETRIES {
-                            let jitter = rand::rng().random_range(0..500);
-                            let delay = RETRY_BASE_MS * 2u64.pow(attempt) + jitter;
-                            warn!(url, status, attempt, delay_ms = delay, "retrying transient POST error");
-                            tokio::time::sleep(Duration::from_millis(delay)).await;
-                            continue;
-                        }
-                        resp = Some(r);
-                        break;
-                    }
-                    Err(e) => {
-                        last_err = Some(e);
-                        break;
-                    }
-                }
-            }
-            match resp {
-                Some(r) => r,
-                None => return Err(EsiError::Http(last_err.unwrap())),
-            }
-        };
-
-        if response.status().as_u16() == 401 && token.is_some() {
-            debug!("got 401 on POST, attempting token refresh and retry");
-            let refreshed = self.refresh_token().await?;
-            let retry_resp = self
-                .client
-                .post(url)
-                .json(&body_value)
-                .bearer_auth(refreshed.access_token.expose_secret())
-                .send()
-                .await?;
-
-            self.update_error_budget(retry_resp.headers());
-
-            if !retry_resp.status().is_success() {
-                let status = retry_resp.status().as_u16();
-                let message = retry_resp.text().await.unwrap_or_default();
-                warn!(url, status, "ESI API error after token refresh retry (POST)");
-                return Err(EsiError::Api { status, message });
-            }
-
-            debug!(
-                url,
-                status = retry_resp.status().as_u16(),
-                elapsed_ms = start.elapsed().as_millis() as u64,
-                "ESI POST request (after 401 retry)"
-            );
-
-            return Ok(retry_resp);
-        }
-
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let message = response.text().await.unwrap_or_default();
-            warn!(url, status, "ESI API error (POST)");
-            return Err(EsiError::Api { status, message });
-        }
-
-        debug!(
-            url,
-            status = response.status().as_u16(),
-            elapsed_ms = start.elapsed().as_millis() as u64,
-            error_budget = self.error_budget.load(Ordering::Relaxed),
-            "ESI POST request"
-        );
-
-        Ok(response)
+        self.execute_request(url, move |client, url| client.post(url).json(&body_value))
+            .await
     }
+}
+
+/// Internal enum to dispatch between GET and POST in paginated fetches.
+#[derive(Clone)]
+enum PageFetcher {
+    Get,
+    Post(Arc<serde_json::Value>),
 }
 
 impl Default for EsiClient {
