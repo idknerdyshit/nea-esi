@@ -1,7 +1,5 @@
 // ESI endpoint methods.
 
-use std::sync::Arc;
-
 use tracing::debug;
 
 use crate::{
@@ -9,6 +7,8 @@ use crate::{
     EsiKillmail, EsiMarketHistoryEntry, EsiMarketOrder, EsiMarketPrice, EsiResolvedName,
     EsiStructureInfo, Result, BASE_URL,
 };
+
+const RESOLVE_NAMES_CHUNK_SIZE: usize = 1000;
 
 impl EsiClient {
     // -----------------------------------------------------------------------
@@ -42,59 +42,12 @@ impl EsiClient {
         region_id: i32,
         type_id: i32,
     ) -> Result<Vec<EsiMarketOrder>> {
-        let base_url = format!(
+        let url = format!(
             "{}/markets/{}/orders/?type_id={}&order_type=all",
             BASE_URL, region_id, type_id
         );
-
-        // First request – also tells us how many pages there are.
-        let first_url = format!("{}&page=1", base_url);
-        let resp = self.request(&first_url).await?;
-
-        let total_pages: i32 = resp
-            .headers()
-            .get("x-pages")
-            .and_then(|v| v.to_str().ok())
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(1);
-
-        let mut orders: Vec<EsiMarketOrder> = resp
-            .json()
-            .await
-            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
-
-        if total_pages > 1 {
-            // Fetch remaining pages concurrently.
-            let mut handles = Vec::with_capacity((total_pages - 1) as usize);
-            for page in 2..=total_pages {
-                let url = format!("{}&page={}", base_url, page);
-                let this = Self {
-                    client: self.client.clone(),
-                    semaphore: Arc::clone(&self.semaphore),
-                    error_budget: Arc::clone(&self.error_budget),
-                    error_budget_reset_at: Arc::clone(&self.error_budget_reset_at),
-                    tokens: Arc::clone(&self.tokens),
-                    app_credentials: self.app_credentials.clone(),
-                };
-                handles.push(tokio::spawn(async move {
-                    let resp = this.request(&url).await?;
-                    let page_orders: Vec<EsiMarketOrder> = resp
-                        .json()
-                        .await
-                        .map_err(|e| EsiError::Deserialize(e.to_string()))?;
-                    Ok::<_, EsiError>(page_orders)
-                }));
-            }
-
-            for handle in handles {
-                let page_orders = handle
-                    .await
-                    .map_err(|e| EsiError::Deserialize(e.to_string()))??;
-                orders.extend(page_orders);
-            }
-        }
-
-        debug!(pages = total_pages, total_orders = orders.len(), "market_orders complete");
+        let orders = self.get_paginated::<EsiMarketOrder>(&url).await?;
+        debug!(total_orders = orders.len(), "market_orders complete");
         Ok(orders)
     }
 
@@ -200,54 +153,9 @@ impl EsiClient {
     /// Fetch all assets for a character, handling pagination.
     #[tracing::instrument(skip(self))]
     pub async fn character_assets(&self, character_id: i64) -> Result<Vec<EsiAssetItem>> {
-        let base_url = format!("{}/characters/{}/assets/", BASE_URL, character_id);
-
-        let first_url = format!("{}?page=1", base_url);
-        let resp = self.request(&first_url).await?;
-
-        let total_pages: i32 = resp
-            .headers()
-            .get("x-pages")
-            .and_then(|v| v.to_str().ok())
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(1);
-
-        let mut items: Vec<EsiAssetItem> = resp
-            .json()
-            .await
-            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
-
-        if total_pages > 1 {
-            let mut handles = Vec::with_capacity((total_pages - 1) as usize);
-            for page in 2..=total_pages {
-                let url = format!("{}?page={}", base_url, page);
-                let this = Self {
-                    client: self.client.clone(),
-                    semaphore: Arc::clone(&self.semaphore),
-                    error_budget: Arc::clone(&self.error_budget),
-                    error_budget_reset_at: Arc::clone(&self.error_budget_reset_at),
-                    tokens: Arc::clone(&self.tokens),
-                    app_credentials: self.app_credentials.clone(),
-                };
-                handles.push(tokio::spawn(async move {
-                    let resp = this.request(&url).await?;
-                    let page_items: Vec<EsiAssetItem> = resp
-                        .json()
-                        .await
-                        .map_err(|e| EsiError::Deserialize(e.to_string()))?;
-                    Ok::<_, EsiError>(page_items)
-                }));
-            }
-
-            for handle in handles {
-                let page_items = handle
-                    .await
-                    .map_err(|e| EsiError::Deserialize(e.to_string()))??;
-                items.extend(page_items);
-            }
-        }
-
-        debug!(pages = total_pages, total_items = items.len(), "character_assets complete");
+        let url = format!("{}/characters/{}/assets/", BASE_URL, character_id);
+        let items = self.get_paginated::<EsiAssetItem>(&url).await?;
+        debug!(total_items = items.len(), "character_assets complete");
         Ok(items)
     }
 
@@ -256,16 +164,28 @@ impl EsiClient {
     // -----------------------------------------------------------------------
 
     /// Resolve a set of IDs to names and categories.
+    ///
+    /// Automatically chunks requests into batches of 1000 (the ESI limit).
     #[tracing::instrument(skip(self, ids))]
     pub async fn resolve_names(&self, ids: &[i64]) -> Result<Vec<EsiResolvedName>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
         let url = format!("{}/universe/names/", BASE_URL);
-        let resp = self.request_post(&url, &ids).await?;
-        let names: Vec<EsiResolvedName> = resp
-            .json()
-            .await
-            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
-        debug!(count = names.len(), "resolve_names complete");
-        Ok(names)
+        let mut all_names = Vec::with_capacity(ids.len());
+
+        for chunk in ids.chunks(RESOLVE_NAMES_CHUNK_SIZE) {
+            let resp = self.request_post(&url, &chunk).await?;
+            let names: Vec<EsiResolvedName> = resp
+                .json()
+                .await
+                .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+            all_names.extend(names);
+        }
+
+        debug!(count = all_names.len(), "resolve_names complete");
+        Ok(all_names)
     }
 
     // -----------------------------------------------------------------------

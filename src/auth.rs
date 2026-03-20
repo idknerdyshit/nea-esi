@@ -222,10 +222,10 @@ impl EsiClient {
         let mut guard = self.tokens.write().await;
 
         // Re-check: another task may have already refreshed while we waited.
-        if let Some(ref existing) = *guard {
-            if !existing.needs_refresh() {
-                return Ok(existing.clone());
-            }
+        if let Some(ref existing) = *guard
+            && !existing.needs_refresh()
+        {
+            return Ok(existing.clone());
         }
 
         let current_refresh = guard

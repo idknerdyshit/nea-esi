@@ -3,14 +3,18 @@
 pub mod auth;
 mod endpoints;
 
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
+use rand::RngExt;
 use reqwest::header::{HeaderMap, HeaderValue, USER_AGENT as USER_AGENT_HEADER};
 use secrecy::{ExposeSecret, SecretString};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use tokio::sync::RwLock;
 use tracing::{debug, warn};
 
 pub use auth::{EsiAppCredentials, EsiTokens, PkceChallenge};
@@ -21,9 +25,20 @@ pub use auth::{EsiAppCredentials, EsiTokens, PkceChallenge};
 
 pub const BASE_URL: &str = "https://esi.evetech.net/latest";
 pub const THE_FORGE: i32 = 10000002;
+pub const DOMAIN: i32 = 10000043;
+pub const SINQ_LAISON: i32 = 10000032;
+pub const HEIMATAR: i32 = 10000030;
+pub const METROPOLIS: i32 = 10000042;
 pub const JITA_STATION: i64 = 60003760;
+pub const AMARR_STATION: i64 = 60008494;
+pub const DODIXIE_STATION: i64 = 60011866;
+pub const RENS_STATION: i64 = 60004588;
+pub const HEK_STATION: i64 = 60005686;
 pub const DEFAULT_USER_AGENT: &str =
     "nea-esi (https://github.com/idknerdyshit/new-eden-analytics)";
+
+const MAX_RETRIES: u32 = 3;
+const RETRY_BASE_MS: u64 = 1000;
 
 // ---------------------------------------------------------------------------
 // Error type
@@ -214,6 +229,15 @@ pub struct EsiMarketPrice {
 }
 
 // ---------------------------------------------------------------------------
+// ETag cache
+// ---------------------------------------------------------------------------
+
+struct CachedResponse {
+    etag: String,
+    body: Vec<u8>,
+}
+
+// ---------------------------------------------------------------------------
 // EsiClient
 // ---------------------------------------------------------------------------
 
@@ -225,6 +249,7 @@ pub struct EsiClient {
     pub(crate) error_budget_reset_at: Arc<AtomicU64>,
     pub(crate) tokens: Arc<tokio::sync::RwLock<Option<EsiTokens>>>,
     pub(crate) app_credentials: Option<EsiAppCredentials>,
+    cache: Option<Arc<RwLock<HashMap<String, CachedResponse>>>>,
 }
 
 impl EsiClient {
@@ -261,6 +286,7 @@ impl EsiClient {
             error_budget_reset_at: Arc::new(AtomicU64::new(0)),
             tokens: Arc::new(tokio::sync::RwLock::new(None)),
             app_credentials: None,
+            cache: None,
         }
     }
 
@@ -297,24 +323,22 @@ impl EsiClient {
     /// Read `X-ESI-Error-Limit-Remain` and `X-ESI-Error-Limit-Reset` from
     /// response headers, updating the stored error budget and reset deadline.
     fn update_error_budget(&self, headers: &reqwest::header::HeaderMap) {
-        if let Some(val) = headers.get("x-esi-error-limit-remain") {
-            if let Ok(s) = val.to_str() {
-                if let Ok(remain) = s.parse::<i32>() {
-                    self.error_budget.store(remain, Ordering::Relaxed);
-                }
-            }
+        if let Some(val) = headers.get("x-esi-error-limit-remain")
+            && let Ok(s) = val.to_str()
+            && let Ok(remain) = s.parse::<i32>()
+        {
+            self.error_budget.store(remain, Ordering::Relaxed);
         }
-        if let Some(val) = headers.get("x-esi-error-limit-reset") {
-            if let Ok(s) = val.to_str() {
-                if let Ok(secs) = s.parse::<u64>() {
-                    let now = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap_or_default()
-                        .as_secs();
-                    self.error_budget_reset_at
-                        .store(now + secs, Ordering::Relaxed);
-                }
-            }
+        if let Some(val) = headers.get("x-esi-error-limit-reset")
+            && let Ok(s) = val.to_str()
+            && let Ok(secs) = s.parse::<u64>()
+        {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+            self.error_budget_reset_at
+                .store(now + secs, Ordering::Relaxed);
         }
     }
 
@@ -340,6 +364,217 @@ impl EsiClient {
             );
             tokio::time::sleep(Duration::from_secs(wait_secs)).await;
         }
+    }
+
+    /// Enable the ETag response cache (builder pattern).
+    pub fn with_cache(mut self) -> Self {
+        self.cache = Some(Arc::new(RwLock::new(HashMap::new())));
+        self
+    }
+
+    /// Clear all cached ETag responses.
+    pub fn clear_cache(&self) {
+        if let Some(ref cache) = self.cache {
+            cache.blocking_write().clear();
+        }
+    }
+
+    /// Create a lightweight clone that shares all Arc-wrapped state.
+    pub(crate) fn clone_shared(&self) -> Self {
+        Self {
+            client: self.client.clone(),
+            semaphore: Arc::clone(&self.semaphore),
+            error_budget: Arc::clone(&self.error_budget),
+            error_budget_reset_at: Arc::clone(&self.error_budget_reset_at),
+            tokens: Arc::clone(&self.tokens),
+            app_credentials: self.app_credentials.clone(),
+            cache: self.cache.as_ref().map(Arc::clone),
+        }
+    }
+
+    /// Fetch all pages of a paginated GET endpoint and flatten into one Vec.
+    pub async fn get_paginated<T: DeserializeOwned + Send + 'static>(
+        &self,
+        base_url: &str,
+    ) -> Result<Vec<T>> {
+        let separator = if base_url.contains('?') { '&' } else { '?' };
+        let first_url = format!("{}{}page=1", base_url, separator);
+        let resp = self.request(&first_url).await?;
+
+        let total_pages: i32 = resp
+            .headers()
+            .get("x-pages")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(1);
+
+        let mut items: Vec<T> = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+
+        if total_pages > 1 {
+            let mut handles = Vec::with_capacity((total_pages - 1) as usize);
+            for page in 2..=total_pages {
+                let url = format!("{}{}page={}", base_url, separator, page);
+                let this = self.clone_shared();
+                handles.push(tokio::spawn(async move {
+                    let resp = this.request(&url).await?;
+                    let page_items: Vec<T> = resp
+                        .json()
+                        .await
+                        .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+                    Ok::<_, EsiError>(page_items)
+                }));
+            }
+
+            for handle in handles {
+                let page_items = handle
+                    .await
+                    .map_err(|e| EsiError::Deserialize(e.to_string()))??;
+                items.extend(page_items);
+            }
+        }
+
+        Ok(items)
+    }
+
+    /// Fetch all pages of a paginated POST endpoint and flatten into one Vec.
+    pub async fn post_paginated<T, B>(
+        &self,
+        base_url: &str,
+        body: &B,
+    ) -> Result<Vec<T>>
+    where
+        T: DeserializeOwned + Send + 'static,
+        B: Serialize + Sync,
+    {
+        let body_value = serde_json::to_value(body)
+            .map_err(|e| EsiError::Internal(format!("failed to serialize body: {}", e)))?;
+
+        let separator = if base_url.contains('?') { '&' } else { '?' };
+        let first_url = format!("{}{}page=1", base_url, separator);
+        let resp = self.request_post(&first_url, &body_value).await?;
+
+        let total_pages: i32 = resp
+            .headers()
+            .get("x-pages")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(1);
+
+        let mut items: Vec<T> = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+
+        if total_pages > 1 {
+            let body_value = Arc::new(body_value);
+            let mut handles = Vec::with_capacity((total_pages - 1) as usize);
+            for page in 2..=total_pages {
+                let url = format!("{}{}page={}", base_url, separator, page);
+                let this = self.clone_shared();
+                let bv = Arc::clone(&body_value);
+                handles.push(tokio::spawn(async move {
+                    let resp = this.request_post(&url, bv.as_ref()).await?;
+                    let page_items: Vec<T> = resp
+                        .json()
+                        .await
+                        .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+                    Ok::<_, EsiError>(page_items)
+                }));
+            }
+
+            for handle in handles {
+                let page_items = handle
+                    .await
+                    .map_err(|e| EsiError::Deserialize(e.to_string()))??;
+                items.extend(page_items);
+            }
+        }
+
+        Ok(items)
+    }
+
+    /// Make a GET request with ETag caching support.
+    ///
+    /// If the cache is enabled and contains a prior response for this URL,
+    /// sends `If-None-Match`. On 304, returns the cached body. On 200,
+    /// caches the response. If caching is not enabled, behaves like
+    /// `request().bytes()`.
+    pub async fn request_cached(&self, url: &str) -> Result<Vec<u8>> {
+        let cached_etag = if let Some(ref cache) = self.cache {
+            let guard = cache.read().await;
+            guard.get(url).map(|c| c.etag.clone())
+        } else {
+            None
+        };
+
+        let _permit = self
+            .semaphore
+            .acquire()
+            .await
+            .map_err(|_| EsiError::Internal("rate-limit semaphore closed".into()))?;
+
+        self.wait_for_budget_reset().await;
+
+        if self.error_budget.load(Ordering::Relaxed) <= 0 {
+            return Err(EsiError::RateLimited);
+        }
+
+        let token = self.ensure_valid_token().await?;
+
+        let mut req = self.client.get(url);
+        if let Some(ref tok) = token {
+            req = req.bearer_auth(tok.expose_secret());
+        }
+        if let Some(ref etag) = cached_etag {
+            req = req.header("If-None-Match", etag.as_str());
+        }
+
+        let response = req.send().await?;
+        self.update_error_budget(response.headers());
+
+        if response.status().as_u16() == 304
+            && let Some(ref cache) = self.cache
+        {
+            let guard = cache.read().await;
+            if let Some(cached) = guard.get(url) {
+                debug!(url, "ETag cache hit (304)");
+                return Ok(cached.body.clone());
+            }
+        }
+
+        if !response.status().is_success() {
+            let status = response.status().as_u16();
+            let message = response.text().await.unwrap_or_default();
+            return Err(EsiError::Api { status, message });
+        }
+
+        let etag = response
+            .headers()
+            .get("etag")
+            .and_then(|v| v.to_str().ok())
+            .map(String::from);
+
+        let body = response
+            .bytes()
+            .await
+            .map_err(EsiError::Http)?
+            .to_vec();
+
+        if let (Some(cache), Some(etag)) = (&self.cache, etag) {
+            let mut guard = cache.write().await;
+            guard.insert(
+                url.to_string(),
+                CachedResponse {
+                    etag,
+                    body: body.clone(),
+                },
+            );
+        }
+
+        Ok(body)
     }
 
     // -----------------------------------------------------------------------
@@ -371,13 +606,41 @@ impl EsiClient {
         let token = self.ensure_valid_token().await?;
 
         let start = std::time::Instant::now();
-        let mut req = self.client.get(url);
-        if let Some(ref tok) = token {
-            req = req.bearer_auth(tok.expose_secret());
-        }
-        let response = req.send().await?;
 
-        self.update_error_budget(response.headers());
+        // Retry loop for transient 502/503/504 errors.
+        let response = {
+            let mut last_err = None;
+            let mut resp = None;
+            for attempt in 0..=MAX_RETRIES {
+                let mut req = self.client.get(url);
+                if let Some(ref tok) = token {
+                    req = req.bearer_auth(tok.expose_secret());
+                }
+                match req.send().await {
+                    Ok(r) => {
+                        self.update_error_budget(r.headers());
+                        let status = r.status().as_u16();
+                        if matches!(status, 502..=504) && attempt < MAX_RETRIES {
+                            let jitter = rand::rng().random_range(0..500);
+                            let delay = RETRY_BASE_MS * 2u64.pow(attempt) + jitter;
+                            warn!(url, status, attempt, delay_ms = delay, "retrying transient error");
+                            tokio::time::sleep(Duration::from_millis(delay)).await;
+                            continue;
+                        }
+                        resp = Some(r);
+                        break;
+                    }
+                    Err(e) => {
+                        last_err = Some(e);
+                        break;
+                    }
+                }
+            }
+            match resp {
+                Some(r) => r,
+                None => return Err(EsiError::Http(last_err.unwrap())),
+            }
+        };
 
         // If 401 and we have tokens, try refreshing once and retry.
         if response.status().as_u16() == 401 && token.is_some() {
@@ -452,13 +715,45 @@ impl EsiClient {
         let token = self.ensure_valid_token().await?;
 
         let start = std::time::Instant::now();
-        let mut req = self.client.post(url).json(body);
-        if let Some(ref tok) = token {
-            req = req.bearer_auth(tok.expose_secret());
-        }
-        let response = req.send().await?;
 
-        self.update_error_budget(response.headers());
+        // Pre-serialize body so we can retry without re-borrowing.
+        let body_value = serde_json::to_value(body)
+            .map_err(|e| EsiError::Internal(format!("failed to serialize body: {}", e)))?;
+
+        // Retry loop for transient 502/503/504 errors.
+        let response = {
+            let mut last_err = None;
+            let mut resp = None;
+            for attempt in 0..=MAX_RETRIES {
+                let mut req = self.client.post(url).json(&body_value);
+                if let Some(ref tok) = token {
+                    req = req.bearer_auth(tok.expose_secret());
+                }
+                match req.send().await {
+                    Ok(r) => {
+                        self.update_error_budget(r.headers());
+                        let status = r.status().as_u16();
+                        if matches!(status, 502..=504) && attempt < MAX_RETRIES {
+                            let jitter = rand::rng().random_range(0..500);
+                            let delay = RETRY_BASE_MS * 2u64.pow(attempt) + jitter;
+                            warn!(url, status, attempt, delay_ms = delay, "retrying transient POST error");
+                            tokio::time::sleep(Duration::from_millis(delay)).await;
+                            continue;
+                        }
+                        resp = Some(r);
+                        break;
+                    }
+                    Err(e) => {
+                        last_err = Some(e);
+                        break;
+                    }
+                }
+            }
+            match resp {
+                Some(r) => r,
+                None => return Err(EsiError::Http(last_err.unwrap())),
+            }
+        };
 
         if response.status().as_u16() == 401 && token.is_some() {
             debug!("got 401 on POST, attempting token refresh and retry");
@@ -466,7 +761,7 @@ impl EsiClient {
             let retry_resp = self
                 .client
                 .post(url)
-                .json(body)
+                .json(&body_value)
                 .bearer_auth(refreshed.access_token.expose_secret())
                 .send()
                 .await?;
