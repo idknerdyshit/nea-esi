@@ -60,70 +60,70 @@ High-value public endpoints that don't require authentication.
 Personal character data — all require SSO tokens.
 
 ### Wallet
-- [ ] `GET /characters/{character_id}/wallet/` — ISK balance
-- [ ] `GET /characters/{character_id}/wallet/journal/` — wallet journal (paginated)
-- [ ] `GET /characters/{character_id}/wallet/transactions/` — wallet transactions
+- [x] `GET /characters/{character_id}/wallet/` — ISK balance
+- [x] `GET /characters/{character_id}/wallet/journal/` — wallet journal (paginated)
+- [x] `GET /characters/{character_id}/wallet/transactions/` — wallet transactions
 
 ### Skills
-- [ ] `GET /characters/{character_id}/skills/` — trained skills
-- [ ] `GET /characters/{character_id}/skillqueue/` — skill queue
-- [ ] `GET /characters/{character_id}/attributes/` — character attributes
+- [x] `GET /characters/{character_id}/skills/` — trained skills
+- [x] `GET /characters/{character_id}/skillqueue/` — skill queue
+- [x] `GET /characters/{character_id}/attributes/` — character attributes
 
 ### Industry
-- [ ] `GET /characters/{character_id}/industry/jobs/` — industry jobs
-- [ ] `GET /characters/{character_id}/blueprints/` — owned blueprints
+- [x] `GET /characters/{character_id}/industry/jobs/` — industry jobs
+- [x] `GET /characters/{character_id}/blueprints/` — owned blueprints
 
 ### Contracts
-- [ ] `GET /characters/{character_id}/contracts/` — personal contracts
-- [ ] `GET /characters/{character_id}/contracts/{contract_id}/items/` — contract items
-- [ ] `GET /characters/{character_id}/contracts/{contract_id}/bids/` — auction bids
+- [x] `GET /characters/{character_id}/contracts/` — personal contracts
+- [x] `GET /characters/{character_id}/contracts/{contract_id}/items/` — contract items
+- [x] `GET /characters/{character_id}/contracts/{contract_id}/bids/` — auction bids
 
 ### Orders
-- [ ] `GET /characters/{character_id}/orders/` — active market orders
-- [ ] `GET /characters/{character_id}/orders/history/` — expired/cancelled orders
+- [x] `GET /characters/{character_id}/orders/` — active market orders
+- [x] `GET /characters/{character_id}/orders/history/` — expired/cancelled orders
 
 ### Fittings
-- [ ] `GET /characters/{character_id}/fittings/` — saved ship fittings
-- [ ] `POST /characters/{character_id}/fittings/` — save a fitting
-- [ ] `DELETE /characters/{character_id}/fittings/{fitting_id}/` — delete a fitting
+- [x] `GET /characters/{character_id}/fittings/` — saved ship fittings
+- [x] `POST /characters/{character_id}/fittings/` — save a fitting
+- [x] `DELETE /characters/{character_id}/fittings/{fitting_id}/` — delete a fitting
 
 ### Location / Ship
-- [ ] `GET /characters/{character_id}/location/` — current location
-- [ ] `GET /characters/{character_id}/ship/` — current ship
-- [ ] `GET /characters/{character_id}/online/` — online status
+- [x] `GET /characters/{character_id}/location/` — current location
+- [x] `GET /characters/{character_id}/ship/` — current ship
+- [x] `GET /characters/{character_id}/online/` — online status
 
 ### Mail
-- [ ] `GET /characters/{character_id}/mail/` — mail headers
-- [ ] `GET /characters/{character_id}/mail/{mail_id}/` — mail body
-- [ ] `POST /characters/{character_id}/mail/` — send mail
-- [ ] `GET /characters/{character_id}/mail/labels/` — mail labels
+- [x] `GET /characters/{character_id}/mail/` — mail headers
+- [x] `GET /characters/{character_id}/mail/{mail_id}/` — mail body
+- [x] `POST /characters/{character_id}/mail/` — send mail
+- [x] `GET /characters/{character_id}/mail/labels/` — mail labels
 
 ### Notifications
-- [ ] `GET /characters/{character_id}/notifications/` — notifications
+- [x] `GET /characters/{character_id}/notifications/` — notifications
 
 ### Contacts
-- [ ] `GET /characters/{character_id}/contacts/` — contact list
-- [ ] `GET /characters/{character_id}/contacts/labels/` — contact labels
+- [x] `GET /characters/{character_id}/contacts/` — contact list
+- [x] `GET /characters/{character_id}/contacts/labels/` — contact labels
 
 ### Bookmarks
-- [ ] `GET /characters/{character_id}/bookmarks/` — personal bookmarks
-- [ ] `GET /characters/{character_id}/bookmarks/folders/` — bookmark folders
+- [x] `GET /characters/{character_id}/bookmarks/` — personal bookmarks
+- [x] `GET /characters/{character_id}/bookmarks/folders/` — bookmark folders
 
 ### Calendar
-- [ ] `GET /characters/{character_id}/calendar/` — upcoming events
-- [ ] `GET /characters/{character_id}/calendar/{event_id}/` — event details
+- [x] `GET /characters/{character_id}/calendar/` — upcoming events
+- [x] `GET /characters/{character_id}/calendar/{event_id}/` — event details
 
 ### Clones
-- [ ] `GET /characters/{character_id}/clones/` — jump clones
-- [ ] `GET /characters/{character_id}/implants/` — active implants
+- [x] `GET /characters/{character_id}/clones/` — jump clones
+- [x] `GET /characters/{character_id}/implants/` — active implants
 
 ### Loyalty Points
-- [ ] `GET /characters/{character_id}/loyalty/points/` — LP balances
-- [ ] `GET /loyalty/stores/{corporation_id}/offers/` — LP store offers (public)
+- [x] `GET /characters/{character_id}/loyalty/points/` — LP balances
+- [x] `GET /loyalty/stores/{corporation_id}/offers/` — LP store offers (public)
 
 ### PI (Planetary Interaction)
-- [ ] `GET /characters/{character_id}/planets/` — list colonies
-- [ ] `GET /characters/{character_id}/planets/{planet_id}/` — colony layout
+- [x] `GET /characters/{character_id}/planets/` — list colonies
+- [x] `GET /characters/{character_id}/planets/{planet_id}/` — colony layout
 
 ---
 

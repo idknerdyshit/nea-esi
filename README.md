@@ -170,6 +170,103 @@ client.sovereignty_campaigns() -> Vec<EsiSovereigntyCampaign>
 client.sovereignty_structures() -> Vec<EsiSovereigntyStructure>
 ```
 
+**Character — Wallet:**
+
+```rust
+client.wallet_balance(character_id: i64) -> f64
+client.wallet_journal(character_id: i64) -> Vec<EsiWalletJournalEntry>  // paginated
+client.wallet_transactions(character_id: i64) -> Vec<EsiWalletTransaction>
+```
+
+**Character — Skills:**
+
+```rust
+client.character_skills(character_id: i64) -> EsiSkills
+client.character_skillqueue(character_id: i64) -> Vec<EsiSkillqueueEntry>
+client.character_attributes(character_id: i64) -> EsiAttributes
+```
+
+**Character — Industry:**
+
+```rust
+client.character_industry_jobs(character_id: i64) -> Vec<EsiIndustryJob>
+client.character_blueprints(character_id: i64) -> Vec<EsiBlueprint>  // paginated
+```
+
+**Character — Contracts:**
+
+```rust
+client.character_contracts(character_id: i64) -> Vec<EsiContract>  // paginated
+client.character_contract_items(character_id: i64, contract_id: i64) -> Vec<EsiContractItem>
+client.character_contract_bids(character_id: i64, contract_id: i64) -> Vec<EsiContractBid>
+```
+
+**Character — Orders:**
+
+```rust
+client.character_orders(character_id: i64) -> Vec<EsiCharacterOrder>
+client.character_order_history(character_id: i64) -> Vec<EsiCharacterOrder>  // paginated
+```
+
+**Character — Fittings:**
+
+```rust
+client.character_fittings(character_id: i64) -> Vec<EsiFitting>
+client.create_fitting(character_id: i64, &EsiNewFitting) -> i64  // POST, returns fitting_id
+client.delete_fitting(character_id: i64, fitting_id: i64) -> ()  // DELETE
+```
+
+**Character — Location:**
+
+```rust
+client.character_location(character_id: i64) -> EsiLocation
+client.character_ship(character_id: i64) -> EsiShip
+client.character_online(character_id: i64) -> EsiOnlineStatus
+```
+
+**Character — Mail:**
+
+```rust
+client.character_mail(character_id: i64) -> Vec<EsiMailHeader>
+client.character_mail_before(character_id: i64, last_mail_id: i64) -> Vec<EsiMailHeader>
+client.character_mail_body(character_id: i64, mail_id: i64) -> EsiMailBody
+client.send_mail(character_id: i64, &EsiNewMail) -> i32  // POST, returns mail_id
+client.character_mail_labels(character_id: i64) -> EsiMailLabels
+```
+
+**Character — Notifications & Contacts:**
+
+```rust
+client.character_notifications(character_id: i64) -> Vec<EsiNotification>
+client.character_contacts(character_id: i64) -> Vec<EsiContact>  // paginated
+client.character_contact_labels(character_id: i64) -> Vec<EsiContactLabel>
+```
+
+**Character — Bookmarks & Calendar:**
+
+```rust
+client.character_bookmarks(character_id: i64) -> Vec<EsiBookmark>  // paginated
+client.character_bookmark_folders(character_id: i64) -> Vec<EsiBookmarkFolder>
+client.character_calendar(character_id: i64) -> Vec<EsiCalendarEvent>
+client.character_calendar_event(character_id: i64, event_id: i64) -> EsiCalendarEventDetail
+```
+
+**Character — Clones & Loyalty:**
+
+```rust
+client.character_clones(character_id: i64) -> EsiClones
+client.character_implants(character_id: i64) -> Vec<i32>
+client.character_loyalty_points(character_id: i64) -> Vec<EsiLoyaltyPoints>
+client.loyalty_store_offers(corporation_id: i64) -> Vec<EsiLoyaltyStoreOffer>  // public
+```
+
+**Character — Planetary Interaction:**
+
+```rust
+client.character_planets(character_id: i64) -> Vec<EsiPlanetSummary>
+client.character_planet_detail(character_id: i64, planet_id: i32) -> EsiPlanetDetail
+```
+
 **Other:**
 
 ```rust
@@ -196,6 +293,9 @@ client.request(url: &str) -> reqwest::Response
 
 // Rate-limited POST with retry on 502/503/504 and network errors
 client.request_post(url: &str, body: &impl Serialize) -> reqwest::Response
+
+// Rate-limited DELETE with retry on 502/503/504 and network errors
+client.request_delete(url: &str) -> reqwest::Response
 
 // GET with ETag caching (returns raw bytes; requires .with_cache())
 client.request_cached(url: &str) -> Vec<u8>
@@ -256,6 +356,72 @@ client.clear_cache().await
 
 **`EsiSovereigntyStructure`** — `alliance_id: Option<i64>`, `solar_system_id: i32`, `structure_id: i64`, `structure_type_id: i32`, `vulnerability_occupancy_level: Option<f64>`, `vulnerable_start_time: Option<DateTime<Utc>>`, `vulnerable_end_time: Option<DateTime<Utc>>`
 
+**`EsiWalletJournalEntry`** — `id: i64`, `date: DateTime<Utc>`, `ref_type: String`, optional: `amount`, `balance`, `description`, `first_party_id`, `second_party_id`, `reason`, `context_id`, `context_id_type`, `tax`, `tax_receiver_id`
+
+**`EsiWalletTransaction`** — `transaction_id: i64`, `date: DateTime<Utc>`, `type_id: i32`, `location_id: i64`, `unit_price: f64`, `quantity: i32`, `client_id: i64`, `is_buy: bool`, `is_personal: bool`, `journal_ref_id: i64`
+
+**`EsiSkills`** — `skills: Vec<EsiSkill>`, `total_sp: i64`, optional: `unallocated_sp`
+
+**`EsiSkill`** — `skill_id: i32`, `trained_skill_level: i32`, `active_skill_level: i32`, `skillpoints_in_skill: i64`
+
+**`EsiSkillqueueEntry`** — `skill_id: i32`, `finish_level: i32`, `queue_position: i32`, optional: `start_date`, `finish_date`, `training_start_sp`, `level_start_sp`, `level_end_sp`
+
+**`EsiAttributes`** — `intelligence/memory/perception/willpower/charisma: i32`, optional: `bonus_remaps`, `last_remap_date`, `accrued_remap_cooldown_date`
+
+**`EsiIndustryJob`** — `job_id: i32`, `installer_id: i64`, `facility_id: i64`, `activity_id: i32`, `blueprint_id: i64`, `blueprint_type_id: i32`, `blueprint_location_id: i64`, `output_location_id: i64`, `runs: i32`, `status: String`, `duration: i32`, `start_date/end_date: DateTime<Utc>`, optional: `cost`, `licensed_runs`, `probability`, `product_type_id`, `pause_date`, `completed_date`, `completed_character_id`, `successful_runs`, `station_id`
+
+**`EsiBlueprint`** — `item_id: i64`, `type_id: i32`, `location_id: i64`, `location_flag: String`, `quantity: i32`, `time_efficiency: i32`, `material_efficiency: i32`, `runs: i32`
+
+**`EsiContract`** — `contract_id: i64`, `issuer_id/issuer_corporation_id: i64`, `contract_type: String`, `status/availability: String`, `date_issued/date_expired: DateTime<Utc>`, `for_corporation: bool`, optional: `assignee_id`, `acceptor_id`, `title`, `date_accepted`, `date_completed`, `price`, `reward`, `collateral`, `buyout`, `volume`, `days_to_complete`, `start_location_id`, `end_location_id`
+
+**`EsiContractItem`** — `record_id: i64`, `type_id: i32`, `quantity: i32`, `is_included: bool`, optional: `is_singleton`, `raw_quantity`
+
+**`EsiContractBid`** — `bid_id: i64`, `bidder_id: i64`, `date_bid: DateTime<Utc>`, `amount: f64`
+
+**`EsiCharacterOrder`** — `order_id: i64`, `type_id: i32`, `region_id: i32`, `location_id: i64`, `range: String`, `is_buy_order: bool`, `price: f64`, `volume_total/volume_remain: i32`, `issued: DateTime<Utc>`, `min_volume: i32`, `duration: i32`, optional: `state`, `escrow`, `is_corporation`
+
+**`EsiFitting`** — `fitting_id: i64`, `name: String`, `description: String`, `ship_type_id: i32`, `items: Vec<EsiFittingItem>`
+
+**`EsiFittingItem`** — `type_id: i32`, `flag: i32`, `quantity: i32`
+
+**`EsiLocation`** — `solar_system_id: i32`, optional: `station_id`, `structure_id`
+
+**`EsiShip`** — `ship_type_id: i32`, `ship_item_id: i64`, `ship_name: String`
+
+**`EsiOnlineStatus`** — `online: bool`, optional: `last_login`, `last_logout`, `logins`
+
+**`EsiMailHeader`** — `mail_id: i64`, `timestamp: DateTime<Utc>`, optional: `from`, `subject`, `is_read`, default-vec: `labels`, `recipients`
+
+**`EsiMailBody`** — optional: `body`, `from`, `read`, `subject`, `timestamp`, default-vec: `labels`, `recipients`
+
+**`EsiMailLabels`** — `total_unread_count: i32`, `labels: Vec<EsiMailLabel>`
+
+**`EsiNotification`** — `notification_id: i64`, `notification_type: String`, `sender_id: i64`, `sender_type: String`, `timestamp: DateTime<Utc>`, optional: `is_read`, `text`
+
+**`EsiContact`** — `contact_id: i64`, `contact_type: String`, `standing: f64`, default-vec: `label_ids`, optional: `is_watched`
+
+**`EsiContactLabel`** — `label_id: i64`, `label_name: String`
+
+**`EsiBookmark`** — `bookmark_id: i64`, `created: DateTime<Utc>`, `location_id: i32`, `creator_id: i64`, optional: `label`, `notes`, `folder_id`, `item`, `coordinates`
+
+**`EsiBookmarkFolder`** — `folder_id: i32`, `name: String`
+
+**`EsiCalendarEvent`** — `event_id: i64`, `event_date: DateTime<Utc>`, `title: String`, optional: `importance`, `event_response`
+
+**`EsiCalendarEventDetail`** — `event_id: i64`, `date: DateTime<Utc>`, `title: String`, `owner_id: i64`, `owner_name: String`, `owner_type: String`, `duration: i32`, optional: `text`, `importance`, `response`
+
+**`EsiClones`** — optional: `home_location`, `last_clone_jump_date`, `last_station_change_date`, default-vec: `jump_clones`
+
+**`EsiJumpClone`** — `jump_clone_id: i64`, `location_id: i64`, `location_type: String`, default-vec: `implants`, optional: `name`
+
+**`EsiLoyaltyPoints`** — `corporation_id: i64`, `loyalty_points: i32`
+
+**`EsiLoyaltyStoreOffer`** — `offer_id: i32`, `type_id: i32`, `quantity: i32`, `lp_cost: i32`, `isk_cost: i64`, optional: `ak_cost`, default-vec: `required_items`
+
+**`EsiPlanetSummary`** — `solar_system_id: i32`, `planet_id: i32`, `planet_type: String`, `num_pins: i32`, `last_update: DateTime<Utc>`, `upgrade_level: i32`, optional: `owner_id`
+
+**`EsiPlanetDetail`** — `links/pins/routes: Vec<serde_json::Value>` (complex nested PI structures; typed access deferred)
+
 **`EsiTokens`** — `access_token: SecretString`, `refresh_token: SecretString`, `expires_at: DateTime<Utc>`
 
 ### Error handling
@@ -309,6 +475,27 @@ client.clear_cache().await;
 ```
 
 Best for endpoints that change infrequently: `market_prices`, `get_character`, `get_corporation`, `get_alliance`, etc. Not used automatically for paginated endpoints.
+
+## Migrating from 0.3.x to 0.4.0
+
+No breaking changes. 0.4.0 adds comprehensive character-level endpoint coverage:
+
+- **Wallet**: `wallet_balance`, `wallet_journal`, `wallet_transactions`
+- **Skills**: `character_skills`, `character_skillqueue`, `character_attributes`
+- **Industry**: `character_industry_jobs`, `character_blueprints`
+- **Contracts**: `character_contracts`, `character_contract_items`, `character_contract_bids`
+- **Orders**: `character_orders`, `character_order_history`
+- **Fittings**: `character_fittings`, `create_fitting`, `delete_fitting`
+- **Location**: `character_location`, `character_ship`, `character_online`
+- **Mail**: `character_mail`, `character_mail_before`, `character_mail_body`, `send_mail`, `character_mail_labels`
+- **Notifications**: `character_notifications`
+- **Contacts**: `character_contacts`, `character_contact_labels`
+- **Bookmarks**: `character_bookmarks`, `character_bookmark_folders`
+- **Calendar**: `character_calendar`, `character_calendar_event`
+- **Clones**: `character_clones`, `character_implants`
+- **Loyalty**: `character_loyalty_points`, `loyalty_store_offers`
+- **PI**: `character_planets`, `character_planet_detail`
+- **Infrastructure**: `request_delete` for DELETE endpoints
 
 ## Migrating from 0.2.x to 0.3.0
 
