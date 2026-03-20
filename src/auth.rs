@@ -152,6 +152,53 @@ impl EsiClient {
         })
     }
 
+    /// Shared helper: send a token request form and parse the response.
+    async fn token_request(
+        &self,
+        form_params: &[(&str, String)],
+        error_context: &str,
+    ) -> Result<EsiTokens> {
+        let creds = self
+            .app_credentials
+            .as_ref()
+            .ok_or_else(|| EsiError::Auth("no app credentials configured".into()))?;
+
+        let request = if let EsiAppCredentials::Web { client_secret, .. } = creds {
+            self.client
+                .post(SSO_TOKEN_URL)
+                .form(form_params)
+                .basic_auth(creds.client_id(), Some(client_secret.expose_secret()))
+        } else {
+            self.client.post(SSO_TOKEN_URL).form(form_params)
+        };
+
+        let resp = request
+            .send()
+            .await
+            .map_err(|e| EsiError::TokenRefresh(format!("{error_context} request failed: {e}")))?;
+
+        if !resp.status().is_success() {
+            let status = resp.status().as_u16();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(EsiError::TokenRefresh(format!(
+                "{error_context} failed (HTTP {status}): {body}"
+            )));
+        }
+
+        let token_resp: TokenResponse = resp
+            .json()
+            .await
+            .map_err(|e| {
+                EsiError::TokenRefresh(format!("failed to parse token response: {e}"))
+            })?;
+
+        Ok(EsiTokens {
+            access_token: token_resp.access_token,
+            refresh_token: token_resp.refresh_token,
+            expires_at: Utc::now() + Duration::seconds(token_resp.expires_in as i64),
+        })
+    }
+
     /// Exchange an authorization code for tokens.
     pub async fn exchange_code(
         &self,
@@ -164,50 +211,16 @@ impl EsiClient {
             .as_ref()
             .ok_or_else(|| EsiError::Auth("no app credentials configured".into()))?;
 
-        let form = vec![
+        let client_id = creds.client_id().to_string();
+        let form = [
             ("grant_type", "authorization_code".to_string()),
             ("code", code.to_string()),
             ("redirect_uri", redirect_uri.to_string()),
-            ("client_id", creds.client_id().to_string()),
-            (
-                "code_verifier",
-                code_verifier.expose_secret().to_string(),
-            ),
+            ("client_id", client_id),
+            ("code_verifier", code_verifier.expose_secret().to_string()),
         ];
 
-        let request = if let EsiAppCredentials::Web { client_secret, .. } = creds {
-            self.client
-                .post(SSO_TOKEN_URL)
-                .form(&form)
-                .basic_auth(creds.client_id(), Some(client_secret.expose_secret()))
-        } else {
-            self.client.post(SSO_TOKEN_URL).form(&form)
-        };
-
-        let resp = request
-            .send()
-            .await
-            .map_err(|e| EsiError::TokenRefresh(format!("token exchange request failed: {e}")))?;
-
-        if !resp.status().is_success() {
-            let status = resp.status().as_u16();
-            let body = resp.text().await.unwrap_or_default();
-            return Err(EsiError::TokenRefresh(format!(
-                "token exchange failed (HTTP {status}): {body}"
-            )));
-        }
-
-        let token_resp: TokenResponse = resp
-            .json()
-            .await
-            .map_err(|e| EsiError::TokenRefresh(format!("failed to parse token response: {e}")))?;
-
-        let tokens = EsiTokens {
-            access_token: token_resp.access_token,
-            refresh_token: token_resp.refresh_token,
-            expires_at: Utc::now() + Duration::seconds(token_resp.expires_in as i64),
-        };
-
+        let tokens = self.token_request(&form, "token exchange").await?;
         *self.tokens.write().await = Some(tokens.clone());
         debug!("token exchange complete");
         Ok(tokens)
@@ -221,7 +234,7 @@ impl EsiClient {
             .ok_or_else(|| EsiError::Auth("no app credentials configured".into()))?;
 
         // Take write lock — prevents concurrent refresh storms.
-        let mut guard = self.tokens.write().await;
+        let guard = self.tokens.write().await;
 
         // Re-check: another task may have already refreshed while we waited.
         if let Some(ref existing) = *guard
@@ -236,49 +249,17 @@ impl EsiClient {
             .refresh_token
             .clone();
 
-        let form_params = vec![
-            ("grant_type".to_string(), "refresh_token".to_string()),
-            ("client_id".to_string(), creds.client_id().to_string()),
-            (
-                "refresh_token".to_string(),
-                current_refresh.expose_secret().to_string(),
-            ),
+        let client_id = creds.client_id().to_string();
+        let form = [
+            ("grant_type", "refresh_token".to_string()),
+            ("client_id", client_id),
+            ("refresh_token", current_refresh.expose_secret().to_string()),
         ];
 
-        let request = if let EsiAppCredentials::Web { client_secret, .. } = creds {
-            self.client
-                .post(SSO_TOKEN_URL)
-                .form(&form_params)
-                .basic_auth(creds.client_id(), Some(client_secret.expose_secret()))
-        } else {
-            self.client.post(SSO_TOKEN_URL).form(&form_params)
-        };
-
-        let resp = request
-            .send()
-            .await
-            .map_err(|e| EsiError::TokenRefresh(format!("token refresh request failed: {e}")))?;
-
-        if !resp.status().is_success() {
-            let status = resp.status().as_u16();
-            let body = resp.text().await.unwrap_or_default();
-            return Err(EsiError::TokenRefresh(format!(
-                "token refresh failed (HTTP {status}): {body}"
-            )));
-        }
-
-        let token_resp: TokenResponse = resp
-            .json()
-            .await
-            .map_err(|e| EsiError::TokenRefresh(format!("failed to parse token response: {e}")))?;
-
-        let tokens = EsiTokens {
-            access_token: token_resp.access_token,
-            refresh_token: token_resp.refresh_token,
-            expires_at: Utc::now() + Duration::seconds(token_resp.expires_in as i64),
-        };
-
-        *guard = Some(tokens.clone());
+        // Drop guard so token_request can proceed.
+        drop(guard);
+        let tokens = self.token_request(&form, "token refresh").await?;
+        *self.tokens.write().await = Some(tokens.clone());
         debug!("token refresh complete");
         Ok(tokens)
     }
