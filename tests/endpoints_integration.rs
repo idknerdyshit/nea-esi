@@ -188,7 +188,10 @@ async fn test_market_history() {
     let entries = client.market_history(10000002, 34).await.unwrap();
 
     assert_eq!(entries.len(), 1);
-    assert_eq!(entries[0].date, "2026-03-01");
+    assert_eq!(
+        entries[0].date,
+        chrono::NaiveDate::from_ymd_opt(2026, 3, 1).unwrap()
+    );
     assert_eq!(entries[0].volume, 72016862);
 }
 

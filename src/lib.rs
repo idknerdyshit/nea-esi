@@ -8,6 +8,7 @@ use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
+use chrono::{DateTime, NaiveDate, Utc};
 use rand::RngExt;
 use reqwest::header::{HeaderMap, HeaderValue, USER_AGENT as USER_AGENT_HEADER};
 use secrecy::{ExposeSecret, SecretString};
@@ -77,7 +78,7 @@ pub type Result<T> = std::result::Result<T, EsiError>;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct EsiMarketHistoryEntry {
-    pub date: String,
+    pub date: NaiveDate,
     pub average: f64,
     pub highest: f64,
     pub lowest: f64,
@@ -92,8 +93,7 @@ pub struct EsiMarketHistoryEntry {
 #[derive(Debug, Clone, Deserialize)]
 pub struct EsiKillmail {
     pub killmail_id: i64,
-    pub killmail_time: String,
-    #[serde(default)]
+    pub killmail_time: DateTime<Utc>,
     pub solar_system_id: i32,
     pub victim: EsiKillmailVictim,
     #[serde(default)]
@@ -108,13 +108,9 @@ pub struct EsiKillmailAttacker {
     pub corporation_id: Option<i64>,
     #[serde(default)]
     pub alliance_id: Option<i64>,
-    #[serde(default)]
     pub ship_type_id: i32,
-    #[serde(default)]
     pub weapon_type_id: i32,
-    #[serde(default)]
     pub damage_done: i32,
-    #[serde(default)]
     pub final_blow: bool,
 }
 
@@ -145,7 +141,6 @@ pub struct EsiAllianceInfo {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct EsiKillmailVictim {
-    #[serde(default)]
     pub ship_type_id: i32,
     #[serde(default)]
     pub character_id: Option<i64>,
@@ -164,9 +159,7 @@ pub struct EsiKillmailItem {
     pub quantity_destroyed: Option<i64>,
     #[serde(default)]
     pub quantity_dropped: Option<i64>,
-    #[serde(default)]
     pub flag: i32,
-    #[serde(default)]
     pub singleton: i32,
 }
 
@@ -178,7 +171,7 @@ pub struct EsiMarketOrder {
     pub price: f64,
     pub volume_remain: i64,
     pub is_buy_order: bool,
-    pub issued: String,
+    pub issued: DateTime<Utc>,
     pub duration: i32,
     pub min_volume: i32,
     pub range: String,
@@ -211,9 +204,7 @@ pub struct EsiResolvedName {
 #[derive(Debug, Clone, Deserialize)]
 pub struct EsiStructureInfo {
     pub name: String,
-    #[serde(default)]
     pub owner_id: i64,
-    #[serde(default)]
     pub solar_system_id: i32,
     #[serde(default)]
     pub type_id: Option<i32>,
@@ -240,7 +231,6 @@ pub struct EsiTypeInfo {
     pub name: String,
     #[serde(default)]
     pub description: Option<String>,
-    #[serde(default)]
     pub group_id: i32,
     #[serde(default)]
     pub market_group_id: Option<i32>,
@@ -252,7 +242,6 @@ pub struct EsiTypeInfo {
     pub packaged_volume: Option<f64>,
     #[serde(default)]
     pub capacity: Option<f64>,
-    #[serde(default)]
     pub published: bool,
     #[serde(default)]
     pub portion_size: Option<i32>,
@@ -267,9 +256,7 @@ pub struct EsiTypeInfo {
 pub struct EsiGroupInfo {
     pub group_id: i32,
     pub name: String,
-    #[serde(default)]
     pub category_id: i32,
-    #[serde(default)]
     pub published: bool,
     #[serde(default)]
     pub types: Vec<i32>,
@@ -280,7 +267,6 @@ pub struct EsiGroupInfo {
 pub struct EsiCategoryInfo {
     pub category_id: i32,
     pub name: String,
-    #[serde(default)]
     pub published: bool,
     #[serde(default)]
     pub groups: Vec<i32>,
@@ -291,9 +277,7 @@ pub struct EsiCategoryInfo {
 pub struct EsiSolarSystemInfo {
     pub system_id: i32,
     pub name: String,
-    #[serde(default)]
     pub constellation_id: i32,
-    #[serde(default)]
     pub security_status: f64,
     #[serde(default)]
     pub security_class: Option<String>,
@@ -322,7 +306,6 @@ pub struct EsiSystemPlanet {
 pub struct EsiConstellationInfo {
     pub constellation_id: i32,
     pub name: String,
-    #[serde(default)]
     pub region_id: i32,
     #[serde(default)]
     pub systems: Vec<i32>,
@@ -344,9 +327,7 @@ pub struct EsiRegionInfo {
 pub struct EsiStationInfo {
     pub station_id: i32,
     pub name: String,
-    #[serde(default)]
     pub system_id: i32,
-    #[serde(default)]
     pub type_id: i32,
     #[serde(default)]
     pub owner: Option<i64>,
@@ -365,9 +346,7 @@ pub struct EsiStationInfo {
 pub struct EsiStargateInfo {
     pub stargate_id: i32,
     pub name: String,
-    #[serde(default)]
     pub system_id: i32,
-    #[serde(default)]
     pub type_id: i32,
     #[serde(default)]
     pub destination: Option<EsiStargateDestination>,
@@ -505,14 +484,12 @@ pub struct EsiSovereigntyMap {
 #[derive(Debug, Clone, Deserialize)]
 pub struct EsiSovereigntyCampaign {
     pub campaign_id: i32,
-    #[serde(default)]
     pub solar_system_id: i32,
-    #[serde(default)]
     pub structure_id: i64,
     #[serde(default)]
     pub event_type: Option<String>,
     #[serde(default)]
-    pub start_time: Option<String>,
+    pub start_time: Option<DateTime<Utc>>,
     #[serde(default)]
     pub defender_id: Option<i64>,
     #[serde(default)]
@@ -523,19 +500,16 @@ pub struct EsiSovereigntyCampaign {
 #[derive(Debug, Clone, Deserialize)]
 pub struct EsiSovereigntyStructure {
     #[serde(default)]
-    pub alliance_id: i64,
-    #[serde(default)]
+    pub alliance_id: Option<i64>,
     pub solar_system_id: i32,
-    #[serde(default)]
     pub structure_id: i64,
-    #[serde(default)]
     pub structure_type_id: i32,
     #[serde(default)]
     pub vulnerability_occupancy_level: Option<f64>,
     #[serde(default)]
-    pub vulnerable_start_time: Option<String>,
+    pub vulnerable_start_time: Option<DateTime<Utc>>,
     #[serde(default)]
-    pub vulnerable_end_time: Option<String>,
+    pub vulnerable_end_time: Option<DateTime<Utc>>,
 }
 
 // ---------------------------------------------------------------------------
@@ -545,7 +519,6 @@ pub struct EsiSovereigntyStructure {
 /// An active incursion.
 #[derive(Debug, Clone, Deserialize)]
 pub struct EsiIncursion {
-    #[serde(default)]
     pub constellation_id: i32,
     #[serde(rename = "type", default)]
     pub incursion_type: Option<String>,
@@ -570,12 +543,11 @@ pub struct EsiIncursion {
 /// Server status.
 #[derive(Debug, Clone, Deserialize)]
 pub struct EsiServerStatus {
-    #[serde(default)]
     pub players: i32,
     #[serde(default)]
     pub server_version: Option<String>,
     #[serde(default)]
-    pub start_time: Option<String>,
+    pub start_time: Option<DateTime<Utc>>,
     #[serde(default)]
     pub vip: Option<bool>,
 }
@@ -1065,7 +1037,7 @@ mod tests {
             price,
             volume_remain,
             is_buy_order: is_buy,
-            issued: "2026-01-01T00:00:00Z".to_string(),
+            issued: "2026-01-01T00:00:00Z".parse().unwrap(),
             duration: 90,
             min_volume: 1,
             range: "station".to_string(),
@@ -1191,7 +1163,10 @@ mod tests {
 
         let km: EsiKillmail = serde_json::from_str(json).unwrap();
         assert_eq!(km.killmail_id, 123456);
-        assert_eq!(km.killmail_time, "2026-03-17T12:00:00Z");
+        assert_eq!(
+            km.killmail_time,
+            "2026-03-17T12:00:00Z".parse::<DateTime<Utc>>().unwrap()
+        );
         assert_eq!(km.solar_system_id, 30000142);
         assert_eq!(km.victim.ship_type_id, 587);
         assert_eq!(km.victim.character_id, Some(91234567));
@@ -1232,7 +1207,10 @@ mod tests {
     fn test_deserialize_market_history_entry() {
         let json = r#"{"date":"2026-03-01","average":5.25,"highest":5.27,"lowest":5.11,"volume":72016862,"order_count":2267}"#;
         let entry: EsiMarketHistoryEntry = serde_json::from_str(json).unwrap();
-        assert_eq!(entry.date, "2026-03-01");
+        assert_eq!(
+            entry.date,
+            NaiveDate::from_ymd_opt(2026, 3, 1).unwrap()
+        );
         assert!((entry.average - 5.25).abs() < f64::EPSILON);
         assert_eq!(entry.volume, 72016862);
         assert_eq!(entry.order_count, 2267);
@@ -1335,12 +1313,13 @@ mod tests {
 
     #[test]
     fn test_deserialize_type_info_minimal() {
-        let json = r#"{"type_id": 34, "name": "Tritanium"}"#;
+        let json = r#"{"type_id": 34, "name": "Tritanium", "group_id": 18, "published": true}"#;
         let info: EsiTypeInfo = serde_json::from_str(json).unwrap();
         assert_eq!(info.type_id, 34);
         assert_eq!(info.name, "Tritanium");
+        assert_eq!(info.group_id, 18);
+        assert!(info.published);
         assert_eq!(info.market_group_id, None);
-        assert!(!info.published);
     }
 
     #[test]
@@ -1529,7 +1508,7 @@ mod tests {
     fn test_deserialize_sovereignty_structure() {
         let json = r#"{"alliance_id": 99000001, "solar_system_id": 30000001, "structure_id": 1234567890, "structure_type_id": 32226}"#;
         let s: EsiSovereigntyStructure = serde_json::from_str(json).unwrap();
-        assert_eq!(s.alliance_id, 99000001);
+        assert_eq!(s.alliance_id, Some(99000001));
         assert_eq!(s.structure_type_id, 32226);
     }
 
@@ -1559,6 +1538,10 @@ mod tests {
         let status: EsiServerStatus = serde_json::from_str(json).unwrap();
         assert_eq!(status.players, 23456);
         assert_eq!(status.server_version, Some("2345678".to_string()));
+        assert_eq!(
+            status.start_time,
+            Some("2026-03-20T11:00:00Z".parse::<DateTime<Utc>>().unwrap())
+        );
         assert_eq!(status.vip, Some(false));
     }
 
