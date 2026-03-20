@@ -9,6 +9,7 @@ use crate::{
     EsiKillmailRef, EsiMarketGroupInfo, EsiMarketHistoryEntry, EsiMarketOrder, EsiMarketPrice,
     EsiRegionInfo, EsiResolvedIds, EsiResolvedName, EsiSearchResult, EsiServerStatus,
     EsiSolarSystemInfo, EsiSovereigntyCampaign, EsiSovereigntyMap, EsiSovereigntyStructure,
+    EsiSkillqueueEntry, EsiSkills, EsiAttributes,
     EsiStargateInfo, EsiStationInfo, EsiStructureInfo, EsiTypeInfo, EsiWalletJournalEntry,
     EsiWalletTransaction, Result,
 };
@@ -162,6 +163,34 @@ impl EsiClient {
             character_id
         ))
         .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Skill endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch a character's trained skills.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_skills(&self, character_id: i64) -> Result<EsiSkills> {
+        self.get_json(&format!("/characters/{}/skills/", character_id))
+            .await
+    }
+
+    /// Fetch a character's skill queue.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_skillqueue(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiSkillqueueEntry>> {
+        self.get_json(&format!("/characters/{}/skillqueue/", character_id))
+            .await
+    }
+
+    /// Fetch a character's attributes.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_attributes(&self, character_id: i64) -> Result<EsiAttributes> {
+        self.get_json(&format!("/characters/{}/attributes/", character_id))
+            .await
     }
 
     // -----------------------------------------------------------------------

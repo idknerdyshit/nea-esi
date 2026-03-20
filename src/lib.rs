@@ -600,6 +600,63 @@ pub struct EsiWalletTransaction {
 }
 
 // ---------------------------------------------------------------------------
+// Skill types (Phase 2)
+// ---------------------------------------------------------------------------
+
+/// Character skills overview.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiSkills {
+    #[serde(default)]
+    pub skills: Vec<EsiSkill>,
+    pub total_sp: i64,
+    #[serde(default)]
+    pub unallocated_sp: Option<i32>,
+}
+
+/// A single trained skill.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiSkill {
+    pub skill_id: i32,
+    pub trained_skill_level: i32,
+    pub active_skill_level: i32,
+    pub skillpoints_in_skill: i64,
+}
+
+/// A skill queue entry.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiSkillqueueEntry {
+    pub skill_id: i32,
+    pub finish_level: i32,
+    pub queue_position: i32,
+    #[serde(default)]
+    pub start_date: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub finish_date: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub training_start_sp: Option<i32>,
+    #[serde(default)]
+    pub level_start_sp: Option<i32>,
+    #[serde(default)]
+    pub level_end_sp: Option<i32>,
+}
+
+/// Character attributes.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiAttributes {
+    pub intelligence: i32,
+    pub memory: i32,
+    pub perception: i32,
+    pub willpower: i32,
+    pub charisma: i32,
+    #[serde(default)]
+    pub bonus_remaps: Option<i32>,
+    #[serde(default)]
+    pub last_remap_date: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub accrued_remap_cooldown_date: Option<DateTime<Utc>>,
+}
+
+// ---------------------------------------------------------------------------
 // ETag cache
 // ---------------------------------------------------------------------------
 
@@ -1652,6 +1709,66 @@ mod tests {
         assert_eq!(entry.ref_type, "player_donation");
         assert_eq!(entry.amount, None);
         assert_eq!(entry.description, None);
+    }
+
+    // -----------------------------------------------------------------------
+    // Phase 2 deserialization tests — Skills
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_deserialize_skills() {
+        let json = r#"{
+            "skills": [
+                {"skill_id": 3300, "trained_skill_level": 5, "active_skill_level": 5, "skillpoints_in_skill": 256000}
+            ],
+            "total_sp": 50000000,
+            "unallocated_sp": 100000
+        }"#;
+        let skills: EsiSkills = serde_json::from_str(json).unwrap();
+        assert_eq!(skills.total_sp, 50000000);
+        assert_eq!(skills.unallocated_sp, Some(100000));
+        assert_eq!(skills.skills.len(), 1);
+        assert_eq!(skills.skills[0].skill_id, 3300);
+        assert_eq!(skills.skills[0].trained_skill_level, 5);
+    }
+
+    #[test]
+    fn test_deserialize_skillqueue_entry() {
+        let json = r#"{
+            "skill_id": 3300,
+            "finish_level": 5,
+            "queue_position": 0,
+            "start_date": "2026-03-15T10:00:00Z",
+            "finish_date": "2026-03-20T10:00:00Z",
+            "training_start_sp": 45255,
+            "level_start_sp": 45255,
+            "level_end_sp": 256000
+        }"#;
+        let entry: EsiSkillqueueEntry = serde_json::from_str(json).unwrap();
+        assert_eq!(entry.skill_id, 3300);
+        assert_eq!(entry.finish_level, 5);
+        assert_eq!(entry.queue_position, 0);
+        assert!(entry.start_date.is_some());
+        assert_eq!(entry.level_end_sp, Some(256000));
+    }
+
+    #[test]
+    fn test_deserialize_attributes() {
+        let json = r#"{
+            "intelligence": 20,
+            "memory": 20,
+            "perception": 20,
+            "willpower": 20,
+            "charisma": 19,
+            "bonus_remaps": 1,
+            "last_remap_date": "2025-01-01T00:00:00Z"
+        }"#;
+        let attrs: EsiAttributes = serde_json::from_str(json).unwrap();
+        assert_eq!(attrs.intelligence, 20);
+        assert_eq!(attrs.charisma, 19);
+        assert_eq!(attrs.bonus_remaps, Some(1));
+        assert!(attrs.last_remap_date.is_some());
+        assert_eq!(attrs.accrued_remap_cooldown_date, None);
     }
 
     #[test]

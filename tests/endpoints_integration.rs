@@ -221,6 +221,95 @@ async fn test_market_prices() {
 }
 
 // ---------------------------------------------------------------------------
+// character_skills — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_skills() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "skills": [
+            {"skill_id": 3300, "trained_skill_level": 5, "active_skill_level": 5, "skillpoints_in_skill": 256000}
+        ],
+        "total_sp": 50000000,
+        "unallocated_sp": 100000
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/skills/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let skills = client.character_skills(91234567).await.unwrap();
+
+    assert_eq!(skills.total_sp, 50000000);
+    assert_eq!(skills.skills.len(), 1);
+    assert_eq!(skills.skills[0].skill_id, 3300);
+}
+
+// ---------------------------------------------------------------------------
+// character_skillqueue — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_skillqueue() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "skill_id": 3300,
+        "finish_level": 5,
+        "queue_position": 0,
+        "start_date": "2026-03-15T10:00:00Z",
+        "finish_date": "2026-03-20T10:00:00Z"
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/skillqueue/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let queue = client.character_skillqueue(91234567).await.unwrap();
+
+    assert_eq!(queue.len(), 1);
+    assert_eq!(queue[0].skill_id, 3300);
+    assert_eq!(queue[0].finish_level, 5);
+}
+
+// ---------------------------------------------------------------------------
+// character_attributes — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_attributes() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "intelligence": 20,
+        "memory": 20,
+        "perception": 20,
+        "willpower": 20,
+        "charisma": 19
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/attributes/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let attrs = client.character_attributes(91234567).await.unwrap();
+
+    assert_eq!(attrs.intelligence, 20);
+    assert_eq!(attrs.charisma, 19);
+}
+
+// ---------------------------------------------------------------------------
 // wallet_balance — simple GET returning bare f64
 // ---------------------------------------------------------------------------
 
