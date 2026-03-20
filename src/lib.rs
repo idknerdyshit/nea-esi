@@ -3,7 +3,7 @@
 pub mod auth;
 mod endpoints;
 
-use std::sync::atomic::{AtomicI32, Ordering};
+use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -221,6 +221,8 @@ pub struct EsiClient {
     pub(crate) client: reqwest::Client,
     pub(crate) semaphore: Arc<tokio::sync::Semaphore>,
     pub(crate) error_budget: Arc<AtomicI32>,
+    /// Unix epoch (seconds) at which the error budget resets.
+    pub(crate) error_budget_reset_at: Arc<AtomicU64>,
     pub(crate) tokens: Arc<tokio::sync::RwLock<Option<EsiTokens>>>,
     pub(crate) app_credentials: Option<EsiAppCredentials>,
 }
@@ -256,6 +258,7 @@ impl EsiClient {
             client,
             semaphore: Arc::new(tokio::sync::Semaphore::new(20)),
             error_budget: Arc::new(AtomicI32::new(100)),
+            error_budget_reset_at: Arc::new(AtomicU64::new(0)),
             tokens: Arc::new(tokio::sync::RwLock::new(None)),
             app_credentials: None,
         }
@@ -291,6 +294,54 @@ impl EsiClient {
         self.error_budget.load(Ordering::Relaxed)
     }
 
+    /// Read `X-ESI-Error-Limit-Remain` and `X-ESI-Error-Limit-Reset` from
+    /// response headers, updating the stored error budget and reset deadline.
+    fn update_error_budget(&self, headers: &reqwest::header::HeaderMap) {
+        if let Some(val) = headers.get("x-esi-error-limit-remain") {
+            if let Ok(s) = val.to_str() {
+                if let Ok(remain) = s.parse::<i32>() {
+                    self.error_budget.store(remain, Ordering::Relaxed);
+                }
+            }
+        }
+        if let Some(val) = headers.get("x-esi-error-limit-reset") {
+            if let Ok(s) = val.to_str() {
+                if let Ok(secs) = s.parse::<u64>() {
+                    let now = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_secs();
+                    self.error_budget_reset_at
+                        .store(now + secs, Ordering::Relaxed);
+                }
+            }
+        }
+    }
+
+    /// When the error budget is low, sleep until the reset window instead of a
+    /// flat delay. Falls back to 60 s if no reset header was ever received.
+    async fn wait_for_budget_reset(&self) {
+        let budget = self.error_budget.load(Ordering::Relaxed);
+        if budget < 20 {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+            let reset_at = self.error_budget_reset_at.load(Ordering::Relaxed);
+            let wait_secs = if reset_at > now {
+                reset_at - now
+            } else {
+                // No reset header seen yet – fall back to a conservative wait.
+                60
+            };
+            warn!(
+                budget,
+                wait_secs, "ESI error budget low – sleeping until reset"
+            );
+            tokio::time::sleep(Duration::from_secs(wait_secs)).await;
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Core request helper
     // -----------------------------------------------------------------------
@@ -308,15 +359,8 @@ impl EsiClient {
             .await
             .map_err(|_| EsiError::Internal("rate-limit semaphore closed".into()))?;
 
-        // If the error budget is very low, back off briefly.
-        let budget = self.error_budget.load(Ordering::Relaxed);
-        if budget < 20 {
-            warn!(
-                budget,
-                "ESI error budget low – adding 1 s delay before request"
-            );
-            tokio::time::sleep(Duration::from_secs(1)).await;
-        }
+        // If the error budget is very low, wait for the reset window.
+        self.wait_for_budget_reset().await;
 
         // If budget is zero we refuse to make the call.
         if self.error_budget.load(Ordering::Relaxed) <= 0 {
@@ -333,14 +377,7 @@ impl EsiClient {
         }
         let response = req.send().await?;
 
-        // Update error budget from response header.
-        if let Some(val) = response.headers().get("x-esi-error-limit-remain") {
-            if let Ok(s) = val.to_str() {
-                if let Ok(remain) = s.parse::<i32>() {
-                    self.error_budget.store(remain, Ordering::Relaxed);
-                }
-            }
-        }
+        self.update_error_budget(response.headers());
 
         // If 401 and we have tokens, try refreshing once and retry.
         if response.status().as_u16() == 401 && token.is_some() {
@@ -353,14 +390,7 @@ impl EsiClient {
                 .send()
                 .await?;
 
-            // Update error budget from retry response.
-            if let Some(val) = retry_resp.headers().get("x-esi-error-limit-remain") {
-                if let Ok(s) = val.to_str() {
-                    if let Ok(remain) = s.parse::<i32>() {
-                        self.error_budget.store(remain, Ordering::Relaxed);
-                    }
-                }
-            }
+            self.update_error_budget(retry_resp.headers());
 
             if !retry_resp.status().is_success() {
                 let status = retry_resp.status().as_u16();
@@ -413,14 +443,7 @@ impl EsiClient {
             .await
             .map_err(|_| EsiError::Internal("rate-limit semaphore closed".into()))?;
 
-        let budget = self.error_budget.load(Ordering::Relaxed);
-        if budget < 20 {
-            warn!(
-                budget,
-                "ESI error budget low – adding 1 s delay before request"
-            );
-            tokio::time::sleep(Duration::from_secs(1)).await;
-        }
+        self.wait_for_budget_reset().await;
 
         if self.error_budget.load(Ordering::Relaxed) <= 0 {
             return Err(EsiError::RateLimited);
@@ -435,13 +458,7 @@ impl EsiClient {
         }
         let response = req.send().await?;
 
-        if let Some(val) = response.headers().get("x-esi-error-limit-remain") {
-            if let Ok(s) = val.to_str() {
-                if let Ok(remain) = s.parse::<i32>() {
-                    self.error_budget.store(remain, Ordering::Relaxed);
-                }
-            }
-        }
+        self.update_error_budget(response.headers());
 
         if response.status().as_u16() == 401 && token.is_some() {
             debug!("got 401 on POST, attempting token refresh and retry");
@@ -454,13 +471,7 @@ impl EsiClient {
                 .send()
                 .await?;
 
-            if let Some(val) = retry_resp.headers().get("x-esi-error-limit-remain") {
-                if let Ok(s) = val.to_str() {
-                    if let Ok(remain) = s.parse::<i32>() {
-                        self.error_budget.store(remain, Ordering::Relaxed);
-                    }
-                }
-            }
+            self.update_error_budget(retry_resp.headers());
 
             if !retry_resp.status().is_success() {
                 let status = retry_resp.status().as_u16();

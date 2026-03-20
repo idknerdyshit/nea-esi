@@ -72,6 +72,7 @@ impl EsiClient {
                     client: self.client.clone(),
                     semaphore: Arc::clone(&self.semaphore),
                     error_budget: Arc::clone(&self.error_budget),
+                    error_budget_reset_at: Arc::clone(&self.error_budget_reset_at),
                     tokens: Arc::clone(&self.tokens),
                     app_credentials: self.app_credentials.clone(),
                 };
@@ -224,6 +225,7 @@ impl EsiClient {
                     client: self.client.clone(),
                     semaphore: Arc::clone(&self.semaphore),
                     error_budget: Arc::clone(&self.error_budget),
+                    error_budget_reset_at: Arc::clone(&self.error_budget_reset_at),
                     tokens: Arc::clone(&self.tokens),
                     app_credentials: self.app_credentials.clone(),
                 };
