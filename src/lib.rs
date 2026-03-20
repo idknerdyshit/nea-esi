@@ -657,6 +657,153 @@ pub struct EsiAttributes {
 }
 
 // ---------------------------------------------------------------------------
+// Industry types (Phase 2)
+// ---------------------------------------------------------------------------
+
+/// A character industry job.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiIndustryJob {
+    pub job_id: i32,
+    pub installer_id: i64,
+    pub facility_id: i64,
+    pub activity_id: i32,
+    pub blueprint_id: i64,
+    pub blueprint_type_id: i32,
+    pub blueprint_location_id: i64,
+    pub output_location_id: i64,
+    pub runs: i32,
+    pub status: String,
+    pub duration: i32,
+    pub start_date: DateTime<Utc>,
+    pub end_date: DateTime<Utc>,
+    #[serde(default)]
+    pub cost: Option<f64>,
+    #[serde(default)]
+    pub licensed_runs: Option<i32>,
+    #[serde(default)]
+    pub probability: Option<f64>,
+    #[serde(default)]
+    pub product_type_id: Option<i32>,
+    #[serde(default)]
+    pub pause_date: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub completed_date: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub completed_character_id: Option<i64>,
+    #[serde(default)]
+    pub successful_runs: Option<i32>,
+    #[serde(default)]
+    pub station_id: Option<i64>,
+}
+
+/// A character blueprint.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiBlueprint {
+    pub item_id: i64,
+    pub type_id: i32,
+    pub location_id: i64,
+    pub location_flag: String,
+    pub quantity: i32,
+    pub time_efficiency: i32,
+    pub material_efficiency: i32,
+    pub runs: i32,
+}
+
+// ---------------------------------------------------------------------------
+// Contract types (Phase 2)
+// ---------------------------------------------------------------------------
+
+/// A character contract.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiContract {
+    pub contract_id: i64,
+    pub issuer_id: i64,
+    pub issuer_corporation_id: i64,
+    #[serde(default)]
+    pub assignee_id: Option<i64>,
+    #[serde(default)]
+    pub acceptor_id: Option<i64>,
+    #[serde(rename = "type")]
+    pub contract_type: String,
+    pub status: String,
+    pub availability: String,
+    pub date_issued: DateTime<Utc>,
+    pub date_expired: DateTime<Utc>,
+    pub for_corporation: bool,
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub date_accepted: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub date_completed: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub price: Option<f64>,
+    #[serde(default)]
+    pub reward: Option<f64>,
+    #[serde(default)]
+    pub collateral: Option<f64>,
+    #[serde(default)]
+    pub buyout: Option<f64>,
+    #[serde(default)]
+    pub volume: Option<f64>,
+    #[serde(default)]
+    pub days_to_complete: Option<i32>,
+    #[serde(default)]
+    pub start_location_id: Option<i64>,
+    #[serde(default)]
+    pub end_location_id: Option<i64>,
+}
+
+/// An item in a contract.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiContractItem {
+    pub record_id: i64,
+    pub type_id: i32,
+    pub quantity: i32,
+    pub is_included: bool,
+    #[serde(default)]
+    pub is_singleton: Option<bool>,
+    #[serde(default)]
+    pub raw_quantity: Option<i32>,
+}
+
+/// A bid on an auction contract.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiContractBid {
+    pub bid_id: i64,
+    pub bidder_id: i64,
+    pub date_bid: DateTime<Utc>,
+    pub amount: f64,
+}
+
+// ---------------------------------------------------------------------------
+// Character order types (Phase 2)
+// ---------------------------------------------------------------------------
+
+/// A character market order.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCharacterOrder {
+    pub order_id: i64,
+    pub type_id: i32,
+    pub region_id: i32,
+    pub location_id: i64,
+    pub range: String,
+    pub is_buy_order: bool,
+    pub price: f64,
+    pub volume_total: i32,
+    pub volume_remain: i32,
+    pub issued: DateTime<Utc>,
+    pub min_volume: i32,
+    pub duration: i32,
+    #[serde(default)]
+    pub state: Option<String>,
+    #[serde(default)]
+    pub escrow: Option<f64>,
+    #[serde(default)]
+    pub is_corporation: Option<bool>,
+}
+
+// ---------------------------------------------------------------------------
 // ETag cache
 // ---------------------------------------------------------------------------
 
@@ -1667,6 +1814,139 @@ mod tests {
     // -----------------------------------------------------------------------
     // Phase 2 deserialization tests — Wallet
     // -----------------------------------------------------------------------
+
+    // -----------------------------------------------------------------------
+    // Phase 2 deserialization tests — Industry, Contracts, Orders
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_deserialize_industry_job() {
+        let json = r#"{
+            "job_id": 123,
+            "installer_id": 91234567,
+            "facility_id": 60003760,
+            "activity_id": 1,
+            "blueprint_id": 1234567890,
+            "blueprint_type_id": 687,
+            "blueprint_location_id": 60003760,
+            "output_location_id": 60003760,
+            "runs": 10,
+            "status": "active",
+            "duration": 3600,
+            "start_date": "2026-03-15T10:00:00Z",
+            "end_date": "2026-03-15T11:00:00Z",
+            "cost": 1500.50,
+            "product_type_id": 687
+        }"#;
+        let job: EsiIndustryJob = serde_json::from_str(json).unwrap();
+        assert_eq!(job.job_id, 123);
+        assert_eq!(job.activity_id, 1);
+        assert_eq!(job.status, "active");
+        assert_eq!(job.runs, 10);
+        assert!((job.cost.unwrap() - 1500.50).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_deserialize_blueprint() {
+        let json = r#"{
+            "item_id": 1234567890,
+            "type_id": 687,
+            "location_id": 60003760,
+            "location_flag": "Hangar",
+            "quantity": -2,
+            "time_efficiency": 20,
+            "material_efficiency": 10,
+            "runs": 100
+        }"#;
+        let bp: EsiBlueprint = serde_json::from_str(json).unwrap();
+        assert_eq!(bp.item_id, 1234567890);
+        assert_eq!(bp.type_id, 687);
+        assert_eq!(bp.quantity, -2);
+        assert_eq!(bp.time_efficiency, 20);
+        assert_eq!(bp.material_efficiency, 10);
+    }
+
+    #[test]
+    fn test_deserialize_contract() {
+        let json = r#"{
+            "contract_id": 123456,
+            "issuer_id": 91234567,
+            "issuer_corporation_id": 98000001,
+            "type": "item_exchange",
+            "status": "outstanding",
+            "availability": "personal",
+            "date_issued": "2026-03-15T10:00:00Z",
+            "date_expired": "2026-03-29T10:00:00Z",
+            "for_corporation": false,
+            "title": "Selling stuff",
+            "price": 1000000.0,
+            "start_location_id": 60003760,
+            "end_location_id": 60003760
+        }"#;
+        let c: EsiContract = serde_json::from_str(json).unwrap();
+        assert_eq!(c.contract_id, 123456);
+        assert_eq!(c.contract_type, "item_exchange");
+        assert_eq!(c.status, "outstanding");
+        assert!(!c.for_corporation);
+        assert_eq!(c.title, Some("Selling stuff".to_string()));
+        assert!((c.price.unwrap() - 1000000.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_deserialize_contract_item() {
+        let json = r#"{
+            "record_id": 999,
+            "type_id": 34,
+            "quantity": 100000,
+            "is_included": true,
+            "is_singleton": false
+        }"#;
+        let item: EsiContractItem = serde_json::from_str(json).unwrap();
+        assert_eq!(item.record_id, 999);
+        assert_eq!(item.type_id, 34);
+        assert_eq!(item.quantity, 100000);
+        assert!(item.is_included);
+    }
+
+    #[test]
+    fn test_deserialize_contract_bid() {
+        let json = r#"{
+            "bid_id": 555,
+            "bidder_id": 91234567,
+            "date_bid": "2026-03-16T12:00:00Z",
+            "amount": 5000000.0
+        }"#;
+        let bid: EsiContractBid = serde_json::from_str(json).unwrap();
+        assert_eq!(bid.bid_id, 555);
+        assert!((bid.amount - 5000000.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_deserialize_character_order() {
+        let json = r#"{
+            "order_id": 6789012345,
+            "type_id": 34,
+            "region_id": 10000002,
+            "location_id": 60003760,
+            "range": "station",
+            "is_buy_order": true,
+            "price": 5.13,
+            "volume_total": 500000,
+            "volume_remain": 250000,
+            "issued": "2026-03-10T08:15:00Z",
+            "min_volume": 1,
+            "duration": 90,
+            "escrow": 1282500.0,
+            "is_corporation": false
+        }"#;
+        let order: EsiCharacterOrder = serde_json::from_str(json).unwrap();
+        assert_eq!(order.order_id, 6789012345);
+        assert!(order.is_buy_order);
+        assert_eq!(order.volume_total, 500000);
+        assert_eq!(order.volume_remain, 250000);
+        assert_eq!(order.state, None);
+        assert!((order.escrow.unwrap() - 1282500.0).abs() < f64::EPSILON);
+    }
 
     #[test]
     fn test_deserialize_wallet_journal_entry_full() {

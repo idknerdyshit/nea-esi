@@ -9,7 +9,8 @@ use crate::{
     EsiKillmailRef, EsiMarketGroupInfo, EsiMarketHistoryEntry, EsiMarketOrder, EsiMarketPrice,
     EsiRegionInfo, EsiResolvedIds, EsiResolvedName, EsiSearchResult, EsiServerStatus,
     EsiSolarSystemInfo, EsiSovereigntyCampaign, EsiSovereigntyMap, EsiSovereigntyStructure,
-    EsiSkillqueueEntry, EsiSkills, EsiAttributes,
+    EsiBlueprint, EsiCharacterOrder, EsiContract, EsiContractBid, EsiContractItem,
+    EsiIndustryJob, EsiSkillqueueEntry, EsiSkills, EsiAttributes,
     EsiStargateInfo, EsiStationInfo, EsiStructureInfo, EsiTypeInfo, EsiWalletJournalEntry,
     EsiWalletTransaction, Result,
 };
@@ -191,6 +192,108 @@ impl EsiClient {
     pub async fn character_attributes(&self, character_id: i64) -> Result<EsiAttributes> {
         self.get_json(&format!("/characters/{}/attributes/", character_id))
             .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Industry endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch a character's industry jobs.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_industry_jobs(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiIndustryJob>> {
+        self.get_json(&format!(
+            "/characters/{}/industry/jobs/",
+            character_id
+        ))
+        .await
+    }
+
+    /// Fetch a character's blueprints (paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn character_blueprints(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiBlueprint>> {
+        self.get_paginated_json(&format!(
+            "/characters/{}/blueprints/",
+            character_id
+        ))
+        .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Contract endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch a character's contracts (paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn character_contracts(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiContract>> {
+        self.get_paginated_json(&format!(
+            "/characters/{}/contracts/",
+            character_id
+        ))
+        .await
+    }
+
+    /// Fetch items in a specific contract.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_contract_items(
+        &self,
+        character_id: i64,
+        contract_id: i64,
+    ) -> Result<Vec<EsiContractItem>> {
+        self.get_json(&format!(
+            "/characters/{}/contracts/{}/items/",
+            character_id, contract_id
+        ))
+        .await
+    }
+
+    /// Fetch bids on a specific auction contract.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_contract_bids(
+        &self,
+        character_id: i64,
+        contract_id: i64,
+    ) -> Result<Vec<EsiContractBid>> {
+        self.get_json(&format!(
+            "/characters/{}/contracts/{}/bids/",
+            character_id, contract_id
+        ))
+        .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Character order endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch a character's active market orders.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_orders(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiCharacterOrder>> {
+        self.get_json(&format!("/characters/{}/orders/", character_id))
+            .await
+    }
+
+    /// Fetch a character's order history (paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn character_order_history(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiCharacterOrder>> {
+        self.get_paginated_json(&format!(
+            "/characters/{}/orders/history/",
+            character_id
+        ))
+        .await
     }
 
     // -----------------------------------------------------------------------
