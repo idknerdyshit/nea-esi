@@ -3,12 +3,16 @@
 use tracing::debug;
 
 use crate::{
-    EsiAllianceInfo, EsiAssetItem, EsiCharacterInfo, EsiClient, EsiCorporationInfo, EsiError,
-    EsiKillmail, EsiMarketHistoryEntry, EsiMarketOrder, EsiMarketPrice, EsiResolvedName,
-    EsiStructureInfo, Result, BASE_URL,
+    EsiAllianceInfo, EsiAssetItem, EsiCategoryInfo, EsiCharacterInfo, EsiClient,
+    EsiConstellationInfo, EsiCorporationInfo, EsiError, EsiGroupInfo, EsiIncursion, EsiKillmail,
+    EsiKillmailRef, EsiMarketGroupInfo, EsiMarketHistoryEntry, EsiMarketOrder, EsiMarketPrice,
+    EsiRegionInfo, EsiResolvedIds, EsiResolvedName, EsiSearchResult, EsiServerStatus,
+    EsiSolarSystemInfo, EsiSovereigntyCampaign, EsiSovereigntyMap, EsiSovereigntyStructure,
+    EsiStargateInfo, EsiStationInfo, EsiStructureInfo, EsiTypeInfo, Result, BASE_URL,
 };
 
 const RESOLVE_NAMES_CHUNK_SIZE: usize = 1000;
+const RESOLVE_IDS_CHUNK_SIZE: usize = 500;
 
 impl EsiClient {
     // -----------------------------------------------------------------------
@@ -226,35 +230,367 @@ impl EsiClient {
     // Utility
     // -----------------------------------------------------------------------
 
-    /// Given a slice of market orders, filter to a specific station and compute
-    /// best bid, best ask, total bid volume, and total ask volume.
-    ///
-    /// Returns `(best_bid, best_ask, bid_volume, ask_volume)`.
-    pub fn compute_best_bid_ask(
-        orders: &[EsiMarketOrder],
-        station_id: i64,
-    ) -> (Option<f64>, Option<f64>, i64, i64) {
-        let mut best_bid: Option<f64> = None;
-        let mut best_ask: Option<f64> = None;
-        let mut bid_volume: i64 = 0;
-        let mut ask_volume: i64 = 0;
+    // -----------------------------------------------------------------------
+    // Universe endpoints (Phase 1)
+    // -----------------------------------------------------------------------
 
-        for order in orders.iter().filter(|o| o.location_id == station_id) {
-            if order.is_buy_order {
-                bid_volume += order.volume_remain;
-                best_bid = Some(match best_bid {
-                    Some(current) => current.max(order.price),
-                    None => order.price,
-                });
-            } else {
-                ask_volume += order.volume_remain;
-                best_ask = Some(match best_ask {
-                    Some(current) => current.min(order.price),
-                    None => order.price,
-                });
-            }
+    /// Fetch detailed information about an inventory type.
+    #[tracing::instrument(skip(self))]
+    pub async fn get_type(&self, type_id: i32) -> Result<EsiTypeInfo> {
+        let url = format!("{}/universe/types/{}/", BASE_URL, type_id);
+        let resp = self.request(&url).await?;
+        let info: EsiTypeInfo = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!(type_id, name = %info.name, "get_type complete");
+        Ok(info)
+    }
+
+    /// List all type IDs (paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn list_type_ids(&self) -> Result<Vec<i32>> {
+        let url = format!("{}/universe/types/", BASE_URL);
+        let ids = self.get_paginated::<i32>(&url).await?;
+        debug!(count = ids.len(), "list_type_ids complete");
+        Ok(ids)
+    }
+
+    /// Fetch inventory group info.
+    #[tracing::instrument(skip(self))]
+    pub async fn get_group(&self, group_id: i32) -> Result<EsiGroupInfo> {
+        let url = format!("{}/universe/groups/{}/", BASE_URL, group_id);
+        let resp = self.request(&url).await?;
+        let info: EsiGroupInfo = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!(group_id, name = %info.name, "get_group complete");
+        Ok(info)
+    }
+
+    /// Fetch inventory category info.
+    #[tracing::instrument(skip(self))]
+    pub async fn get_category(&self, category_id: i32) -> Result<EsiCategoryInfo> {
+        let url = format!("{}/universe/categories/{}/", BASE_URL, category_id);
+        let resp = self.request(&url).await?;
+        let info: EsiCategoryInfo = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!(category_id, name = %info.name, "get_category complete");
+        Ok(info)
+    }
+
+    /// Fetch solar system info.
+    #[tracing::instrument(skip(self))]
+    pub async fn get_system(&self, system_id: i32) -> Result<EsiSolarSystemInfo> {
+        let url = format!("{}/universe/systems/{}/", BASE_URL, system_id);
+        let resp = self.request(&url).await?;
+        let info: EsiSolarSystemInfo = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!(system_id, name = %info.name, "get_system complete");
+        Ok(info)
+    }
+
+    /// Fetch constellation info.
+    #[tracing::instrument(skip(self))]
+    pub async fn get_constellation(&self, constellation_id: i32) -> Result<EsiConstellationInfo> {
+        let url = format!(
+            "{}/universe/constellations/{}/",
+            BASE_URL, constellation_id
+        );
+        let resp = self.request(&url).await?;
+        let info: EsiConstellationInfo = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!(constellation_id, name = %info.name, "get_constellation complete");
+        Ok(info)
+    }
+
+    /// Fetch region info.
+    #[tracing::instrument(skip(self))]
+    pub async fn get_region(&self, region_id: i32) -> Result<EsiRegionInfo> {
+        let url = format!("{}/universe/regions/{}/", BASE_URL, region_id);
+        let resp = self.request(&url).await?;
+        let info: EsiRegionInfo = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!(region_id, name = %info.name, "get_region complete");
+        Ok(info)
+    }
+
+    /// Fetch NPC station info.
+    #[tracing::instrument(skip(self))]
+    pub async fn get_station(&self, station_id: i32) -> Result<EsiStationInfo> {
+        let url = format!("{}/universe/stations/{}/", BASE_URL, station_id);
+        let resp = self.request(&url).await?;
+        let info: EsiStationInfo = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!(station_id, name = %info.name, "get_station complete");
+        Ok(info)
+    }
+
+    /// Fetch stargate info.
+    #[tracing::instrument(skip(self))]
+    pub async fn get_stargate(&self, stargate_id: i32) -> Result<EsiStargateInfo> {
+        let url = format!("{}/universe/stargates/{}/", BASE_URL, stargate_id);
+        let resp = self.request(&url).await?;
+        let info: EsiStargateInfo = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!(stargate_id, name = %info.name, "get_stargate complete");
+        Ok(info)
+    }
+
+    /// Resolve names to IDs (reverse of `resolve_names`).
+    ///
+    /// Automatically chunks requests into batches of 500 (the ESI limit).
+    #[tracing::instrument(skip(self, names))]
+    pub async fn resolve_ids(&self, names: &[String]) -> Result<EsiResolvedIds> {
+        if names.is_empty() {
+            return Ok(EsiResolvedIds::default());
         }
 
-        (best_bid, best_ask, bid_volume, ask_volume)
+        let url = format!("{}/universe/ids/", BASE_URL);
+        let mut merged = EsiResolvedIds::default();
+
+        for chunk in names.chunks(RESOLVE_IDS_CHUNK_SIZE) {
+            let resp = self.request_post(&url, &chunk).await?;
+            let resolved: EsiResolvedIds = resp
+                .json()
+                .await
+                .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+            merged.merge(resolved);
+        }
+
+        debug!("resolve_ids complete");
+        Ok(merged)
     }
+
+    // -----------------------------------------------------------------------
+    // Market endpoints (Phase 1 additions)
+    // -----------------------------------------------------------------------
+
+    /// List all type IDs with active market orders in a region (paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn market_type_ids(&self, region_id: i32) -> Result<Vec<i32>> {
+        let url = format!("{}/markets/{}/types/", BASE_URL, region_id);
+        let ids = self.get_paginated::<i32>(&url).await?;
+        debug!(count = ids.len(), "market_type_ids complete");
+        Ok(ids)
+    }
+
+    /// List all market group IDs.
+    #[tracing::instrument(skip(self))]
+    pub async fn market_group_ids(&self) -> Result<Vec<i32>> {
+        let url = format!("{}/markets/groups/", BASE_URL);
+        let resp = self.request(&url).await?;
+        let ids: Vec<i32> = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!(count = ids.len(), "market_group_ids complete");
+        Ok(ids)
+    }
+
+    /// Fetch market group info.
+    #[tracing::instrument(skip(self))]
+    pub async fn get_market_group(&self, market_group_id: i32) -> Result<EsiMarketGroupInfo> {
+        let url = format!("{}/markets/groups/{}/", BASE_URL, market_group_id);
+        let resp = self.request(&url).await?;
+        let info: EsiMarketGroupInfo = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!(market_group_id, name = %info.name, "get_market_group complete");
+        Ok(info)
+    }
+
+    // -----------------------------------------------------------------------
+    // Search endpoint (Phase 1)
+    // -----------------------------------------------------------------------
+
+    /// Search for entities by name (public, unauthenticated).
+    ///
+    /// `categories` is a comma-separated list of categories to search
+    /// (e.g. `"solar_system,station"`).
+    #[tracing::instrument(skip(self))]
+    pub async fn search(
+        &self,
+        search: &str,
+        categories: &str,
+        strict: bool,
+    ) -> Result<EsiSearchResult> {
+        let base = format!("{}/search/", BASE_URL);
+        let strict_str = strict.to_string();
+        let url = url::Url::parse_with_params(
+            &base,
+            &[
+                ("search", search),
+                ("categories", categories),
+                ("strict", &strict_str),
+            ],
+        )
+        .map_err(|e| EsiError::Internal(format!("failed to build search URL: {}", e)))?;
+
+        let resp = self.request(url.as_str()).await?;
+        let result: EsiSearchResult = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!("search complete");
+        Ok(result)
+    }
+
+    // -----------------------------------------------------------------------
+    // Killmail listing endpoints (Phase 1)
+    // -----------------------------------------------------------------------
+
+    /// Fetch recent killmails for a character (authenticated, paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn character_killmails(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiKillmailRef>> {
+        let url = format!(
+            "{}/characters/{}/killmails/recent/",
+            BASE_URL, character_id
+        );
+        let refs = self.get_paginated::<EsiKillmailRef>(&url).await?;
+        debug!(count = refs.len(), "character_killmails complete");
+        Ok(refs)
+    }
+
+    /// Fetch recent killmails for a corporation (authenticated, paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn corporation_killmails(
+        &self,
+        corporation_id: i64,
+    ) -> Result<Vec<EsiKillmailRef>> {
+        let url = format!(
+            "{}/corporations/{}/killmails/recent/",
+            BASE_URL, corporation_id
+        );
+        let refs = self.get_paginated::<EsiKillmailRef>(&url).await?;
+        debug!(count = refs.len(), "corporation_killmails complete");
+        Ok(refs)
+    }
+
+    // -----------------------------------------------------------------------
+    // Sovereignty endpoints (Phase 1)
+    // -----------------------------------------------------------------------
+
+    /// Fetch the sovereignty map — who owns each system.
+    #[tracing::instrument(skip(self))]
+    pub async fn sovereignty_map(&self) -> Result<Vec<EsiSovereigntyMap>> {
+        let url = format!("{}/sovereignty/map/", BASE_URL);
+        let resp = self.request(&url).await?;
+        let entries: Vec<EsiSovereigntyMap> = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!(count = entries.len(), "sovereignty_map complete");
+        Ok(entries)
+    }
+
+    /// Fetch active sovereignty campaigns.
+    #[tracing::instrument(skip(self))]
+    pub async fn sovereignty_campaigns(&self) -> Result<Vec<EsiSovereigntyCampaign>> {
+        let url = format!("{}/sovereignty/campaigns/", BASE_URL);
+        let resp = self.request(&url).await?;
+        let entries: Vec<EsiSovereigntyCampaign> = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!(count = entries.len(), "sovereignty_campaigns complete");
+        Ok(entries)
+    }
+
+    /// Fetch sovereignty structures.
+    #[tracing::instrument(skip(self))]
+    pub async fn sovereignty_structures(&self) -> Result<Vec<EsiSovereigntyStructure>> {
+        let url = format!("{}/sovereignty/structures/", BASE_URL);
+        let resp = self.request(&url).await?;
+        let entries: Vec<EsiSovereigntyStructure> = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!(count = entries.len(), "sovereignty_structures complete");
+        Ok(entries)
+    }
+
+    // -----------------------------------------------------------------------
+    // Incursions endpoint (Phase 1)
+    // -----------------------------------------------------------------------
+
+    /// Fetch active incursions.
+    #[tracing::instrument(skip(self))]
+    pub async fn incursions(&self) -> Result<Vec<EsiIncursion>> {
+        let url = format!("{}/incursions/", BASE_URL);
+        let resp = self.request(&url).await?;
+        let entries: Vec<EsiIncursion> = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!(count = entries.len(), "incursions complete");
+        Ok(entries)
+    }
+
+    // -----------------------------------------------------------------------
+    // Status endpoint (Phase 1)
+    // -----------------------------------------------------------------------
+
+    /// Fetch server status (player count, server version).
+    #[tracing::instrument(skip(self))]
+    pub async fn server_status(&self) -> Result<EsiServerStatus> {
+        let url = format!("{}/status/", BASE_URL);
+        let resp = self.request(&url).await?;
+        let status: EsiServerStatus = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        debug!(players = status.players, "server_status complete");
+        Ok(status)
+    }
+
+}
+
+/// Given a slice of market orders, filter to a specific station and compute
+/// best bid, best ask, total bid volume, and total ask volume.
+///
+/// Returns `(best_bid, best_ask, bid_volume, ask_volume)`.
+pub fn compute_best_bid_ask(
+    orders: &[EsiMarketOrder],
+    station_id: i64,
+) -> (Option<f64>, Option<f64>, i64, i64) {
+    let mut best_bid: Option<f64> = None;
+    let mut best_ask: Option<f64> = None;
+    let mut bid_volume: i64 = 0;
+    let mut ask_volume: i64 = 0;
+
+    for order in orders.iter().filter(|o| o.location_id == station_id) {
+        if order.is_buy_order {
+            bid_volume += order.volume_remain;
+            best_bid = Some(match best_bid {
+                Some(current) => current.max(order.price),
+                None => order.price,
+            });
+        } else {
+            ask_volume += order.volume_remain;
+            best_ask = Some(match best_ask {
+                Some(current) => current.min(order.price),
+                None => order.price,
+            });
+        }
+    }
+
+    (best_bid, best_ask, bid_volume, ask_volume)
 }

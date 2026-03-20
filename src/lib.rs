@@ -18,6 +18,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, warn};
 
 pub use auth::{EsiAppCredentials, EsiTokens, PkceChallenge};
+pub use endpoints::compute_best_bid_ask;
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -229,6 +230,357 @@ pub struct EsiMarketPrice {
 }
 
 // ---------------------------------------------------------------------------
+// Universe types (Phase 1)
+// ---------------------------------------------------------------------------
+
+/// Detailed information about an inventory type.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiTypeInfo {
+    pub type_id: i32,
+    pub name: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub group_id: i32,
+    #[serde(default)]
+    pub market_group_id: Option<i32>,
+    #[serde(default)]
+    pub mass: Option<f64>,
+    #[serde(default)]
+    pub volume: Option<f64>,
+    #[serde(default)]
+    pub packaged_volume: Option<f64>,
+    #[serde(default)]
+    pub capacity: Option<f64>,
+    #[serde(default)]
+    pub published: bool,
+    #[serde(default)]
+    pub portion_size: Option<i32>,
+    #[serde(default)]
+    pub icon_id: Option<i32>,
+    #[serde(default)]
+    pub graphic_id: Option<i32>,
+}
+
+/// Inventory group info.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiGroupInfo {
+    pub group_id: i32,
+    pub name: String,
+    #[serde(default)]
+    pub category_id: i32,
+    #[serde(default)]
+    pub published: bool,
+    #[serde(default)]
+    pub types: Vec<i32>,
+}
+
+/// Inventory category info.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCategoryInfo {
+    pub category_id: i32,
+    pub name: String,
+    #[serde(default)]
+    pub published: bool,
+    #[serde(default)]
+    pub groups: Vec<i32>,
+}
+
+/// Solar system info.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiSolarSystemInfo {
+    pub system_id: i32,
+    pub name: String,
+    #[serde(default)]
+    pub constellation_id: i32,
+    #[serde(default)]
+    pub security_status: f64,
+    #[serde(default)]
+    pub security_class: Option<String>,
+    #[serde(default)]
+    pub star_id: Option<i32>,
+    #[serde(default)]
+    pub stargates: Vec<i32>,
+    #[serde(default)]
+    pub stations: Vec<i32>,
+    #[serde(default)]
+    pub planets: Vec<EsiSystemPlanet>,
+}
+
+/// A planet within a solar system.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiSystemPlanet {
+    pub planet_id: i32,
+    #[serde(default)]
+    pub moons: Vec<i32>,
+    #[serde(default)]
+    pub asteroid_belts: Vec<i32>,
+}
+
+/// Constellation info.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiConstellationInfo {
+    pub constellation_id: i32,
+    pub name: String,
+    #[serde(default)]
+    pub region_id: i32,
+    #[serde(default)]
+    pub systems: Vec<i32>,
+}
+
+/// Region info.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiRegionInfo {
+    pub region_id: i32,
+    pub name: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub constellations: Vec<i32>,
+}
+
+/// NPC station info.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiStationInfo {
+    pub station_id: i32,
+    pub name: String,
+    #[serde(default)]
+    pub system_id: i32,
+    #[serde(default)]
+    pub type_id: i32,
+    #[serde(default)]
+    pub owner: Option<i64>,
+    #[serde(default)]
+    pub race_id: Option<i32>,
+    #[serde(default)]
+    pub reprocessing_efficiency: Option<f64>,
+    #[serde(default)]
+    pub reprocessing_stations_take: Option<f64>,
+    #[serde(default)]
+    pub office_rental_cost: Option<f64>,
+}
+
+/// Stargate info.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiStargateInfo {
+    pub stargate_id: i32,
+    pub name: String,
+    #[serde(default)]
+    pub system_id: i32,
+    #[serde(default)]
+    pub type_id: i32,
+    #[serde(default)]
+    pub destination: Option<EsiStargateDestination>,
+}
+
+/// Stargate destination.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiStargateDestination {
+    pub stargate_id: i32,
+    pub system_id: i32,
+}
+
+/// Result of POST /universe/ids/ — names resolved to IDs.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct EsiResolvedIds {
+    #[serde(default)]
+    pub characters: Vec<EsiIdEntry>,
+    #[serde(default)]
+    pub corporations: Vec<EsiIdEntry>,
+    #[serde(default)]
+    pub alliances: Vec<EsiIdEntry>,
+    #[serde(default)]
+    pub systems: Vec<EsiIdEntry>,
+    #[serde(default)]
+    pub constellations: Vec<EsiIdEntry>,
+    #[serde(default)]
+    pub regions: Vec<EsiIdEntry>,
+    #[serde(default)]
+    pub stations: Vec<EsiIdEntry>,
+    #[serde(default)]
+    pub inventory_types: Vec<EsiIdEntry>,
+    #[serde(default)]
+    pub factions: Vec<EsiIdEntry>,
+    #[serde(default)]
+    pub agents: Vec<EsiIdEntry>,
+}
+
+impl EsiResolvedIds {
+    /// Merge another `EsiResolvedIds` into this one.
+    pub fn merge(&mut self, other: EsiResolvedIds) {
+        self.characters.extend(other.characters);
+        self.corporations.extend(other.corporations);
+        self.alliances.extend(other.alliances);
+        self.systems.extend(other.systems);
+        self.constellations.extend(other.constellations);
+        self.regions.extend(other.regions);
+        self.stations.extend(other.stations);
+        self.inventory_types.extend(other.inventory_types);
+        self.factions.extend(other.factions);
+        self.agents.extend(other.agents);
+    }
+}
+
+/// A single resolved ID + name entry.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiIdEntry {
+    pub id: i64,
+    pub name: String,
+}
+
+// ---------------------------------------------------------------------------
+// Market types (Phase 1)
+// ---------------------------------------------------------------------------
+
+/// Market group info.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiMarketGroupInfo {
+    pub market_group_id: i32,
+    pub name: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub parent_group_id: Option<i32>,
+    #[serde(default)]
+    pub types: Vec<i32>,
+}
+
+// ---------------------------------------------------------------------------
+// Search types (Phase 1)
+// ---------------------------------------------------------------------------
+
+/// Result of GET /search/.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct EsiSearchResult {
+    #[serde(default)]
+    pub character: Vec<i64>,
+    #[serde(default)]
+    pub corporation: Vec<i64>,
+    #[serde(default)]
+    pub alliance: Vec<i64>,
+    #[serde(default)]
+    pub solar_system: Vec<i32>,
+    #[serde(default)]
+    pub constellation: Vec<i32>,
+    #[serde(default)]
+    pub region: Vec<i32>,
+    #[serde(default)]
+    pub station: Vec<i32>,
+    #[serde(default)]
+    pub inventory_type: Vec<i32>,
+    #[serde(default)]
+    pub agent: Vec<i64>,
+    #[serde(default)]
+    pub faction: Vec<i32>,
+}
+
+// ---------------------------------------------------------------------------
+// Killmail ref types (Phase 1)
+// ---------------------------------------------------------------------------
+
+/// A killmail reference (ID + hash) from a character/corporation killmail listing.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiKillmailRef {
+    pub killmail_id: i64,
+    pub killmail_hash: String,
+}
+
+// ---------------------------------------------------------------------------
+// Sovereignty types (Phase 1)
+// ---------------------------------------------------------------------------
+
+/// Sovereignty map entry — who owns each system.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiSovereigntyMap {
+    pub system_id: i32,
+    #[serde(default)]
+    pub alliance_id: Option<i64>,
+    #[serde(default)]
+    pub corporation_id: Option<i64>,
+    #[serde(default)]
+    pub faction_id: Option<i32>,
+}
+
+/// Active sovereignty campaign.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiSovereigntyCampaign {
+    pub campaign_id: i32,
+    #[serde(default)]
+    pub solar_system_id: i32,
+    #[serde(default)]
+    pub structure_id: i64,
+    #[serde(default)]
+    pub event_type: Option<String>,
+    #[serde(default)]
+    pub start_time: Option<String>,
+    #[serde(default)]
+    pub defender_id: Option<i64>,
+    #[serde(default)]
+    pub constellation_id: Option<i32>,
+}
+
+/// Sovereignty structure.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiSovereigntyStructure {
+    #[serde(default)]
+    pub alliance_id: i64,
+    #[serde(default)]
+    pub solar_system_id: i32,
+    #[serde(default)]
+    pub structure_id: i64,
+    #[serde(default)]
+    pub structure_type_id: i32,
+    #[serde(default)]
+    pub vulnerability_occupancy_level: Option<f64>,
+    #[serde(default)]
+    pub vulnerable_start_time: Option<String>,
+    #[serde(default)]
+    pub vulnerable_end_time: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Incursion types (Phase 1)
+// ---------------------------------------------------------------------------
+
+/// An active incursion.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiIncursion {
+    #[serde(default)]
+    pub constellation_id: i32,
+    #[serde(rename = "type", default)]
+    pub incursion_type: Option<String>,
+    #[serde(default)]
+    pub state: Option<String>,
+    #[serde(default)]
+    pub staging_solar_system_id: Option<i32>,
+    #[serde(default)]
+    pub influence: Option<f64>,
+    #[serde(default)]
+    pub has_boss: bool,
+    #[serde(default)]
+    pub faction_id: Option<i32>,
+    #[serde(default)]
+    pub infested_solar_systems: Vec<i32>,
+}
+
+// ---------------------------------------------------------------------------
+// Server status types (Phase 1)
+// ---------------------------------------------------------------------------
+
+/// Server status.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiServerStatus {
+    #[serde(default)]
+    pub players: i32,
+    #[serde(default)]
+    pub server_version: Option<String>,
+    #[serde(default)]
+    pub start_time: Option<String>,
+    #[serde(default)]
+    pub vip: Option<bool>,
+}
+
+// ---------------------------------------------------------------------------
 // ETag cache
 // ---------------------------------------------------------------------------
 
@@ -373,9 +725,9 @@ impl EsiClient {
     }
 
     /// Clear all cached ETag responses.
-    pub fn clear_cache(&self) {
+    pub async fn clear_cache(&self) {
         if let Some(ref cache) = self.cache {
-            cache.blocking_write().clear();
+            cache.write().await.clear();
         }
     }
 
@@ -837,14 +1189,14 @@ mod tests {
 
     #[test]
     fn test_compute_best_bid_ask_empty() {
-        let (bid, ask, bv, av) = EsiClient::compute_best_bid_ask(&[], JITA_STATION);
+        let (bid, ask, bv, av) = compute_best_bid_ask(&[], JITA_STATION);
         assert_eq!((bid, ask, bv, av), (None, None, 0, 0));
     }
 
     #[test]
     fn test_compute_best_bid_ask_wrong_station() {
         let orders = vec![make_order(1, 99999, 10.0, 100, true)];
-        let (bid, ask, bv, av) = EsiClient::compute_best_bid_ask(&orders, JITA_STATION);
+        let (bid, ask, bv, av) = compute_best_bid_ask(&orders, JITA_STATION);
         assert_eq!((bid, ask, bv, av), (None, None, 0, 0));
     }
 
@@ -854,7 +1206,7 @@ mod tests {
             make_order(1, JITA_STATION, 10.0, 100, true),
             make_order(2, JITA_STATION, 12.0, 200, true),
         ];
-        let (bid, ask, bv, av) = EsiClient::compute_best_bid_ask(&orders, JITA_STATION);
+        let (bid, ask, bv, av) = compute_best_bid_ask(&orders, JITA_STATION);
         assert_eq!(bid, Some(12.0));
         assert_eq!(ask, None);
         assert_eq!(bv, 300);
@@ -867,7 +1219,7 @@ mod tests {
             make_order(1, JITA_STATION, 15.0, 50, false),
             make_order(2, JITA_STATION, 13.0, 75, false),
         ];
-        let (bid, ask, bv, av) = EsiClient::compute_best_bid_ask(&orders, JITA_STATION);
+        let (bid, ask, bv, av) = compute_best_bid_ask(&orders, JITA_STATION);
         assert_eq!(bid, None);
         assert_eq!(ask, Some(13.0));
         assert_eq!(bv, 0);
@@ -882,7 +1234,7 @@ mod tests {
             make_order(3, JITA_STATION, 15.0, 50, false),
             make_order(4, JITA_STATION, 13.0, 75, false),
         ];
-        let (bid, ask, bv, av) = EsiClient::compute_best_bid_ask(&orders, JITA_STATION);
+        let (bid, ask, bv, av) = compute_best_bid_ask(&orders, JITA_STATION);
         assert_eq!(bid, Some(12.0));
         assert_eq!(ask, Some(13.0));
         assert_eq!(bv, 300);
@@ -898,7 +1250,7 @@ mod tests {
             make_order(3, JITA_STATION, 15.0, 50, false),
             make_order(4, amarr, 1.0, 999, false),
         ];
-        let (bid, ask, bv, av) = EsiClient::compute_best_bid_ask(&orders, JITA_STATION);
+        let (bid, ask, bv, av) = compute_best_bid_ask(&orders, JITA_STATION);
         assert_eq!(bid, Some(10.0));
         assert_eq!(ask, Some(15.0));
         assert_eq!(bv, 100);
@@ -1065,5 +1417,272 @@ mod tests {
         assert_eq!(order.type_id, 34);
         assert!(order.is_buy_order);
         assert_eq!(order.location_id, JITA_STATION);
+    }
+
+    // -----------------------------------------------------------------------
+    // Phase 1 deserialization tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_deserialize_type_info() {
+        let json = r#"{
+            "type_id": 587,
+            "name": "Rifter",
+            "description": "A Minmatar frigate.",
+            "group_id": 25,
+            "market_group_id": 61,
+            "mass": 1067000.0,
+            "volume": 27289.0,
+            "packaged_volume": 2500.0,
+            "capacity": 130.0,
+            "published": true,
+            "portion_size": 1,
+            "icon_id": 587,
+            "graphic_id": 46
+        }"#;
+        let info: EsiTypeInfo = serde_json::from_str(json).unwrap();
+        assert_eq!(info.type_id, 587);
+        assert_eq!(info.name, "Rifter");
+        assert_eq!(info.group_id, 25);
+        assert_eq!(info.market_group_id, Some(61));
+        assert!(info.published);
+    }
+
+    #[test]
+    fn test_deserialize_type_info_minimal() {
+        let json = r#"{"type_id": 34, "name": "Tritanium"}"#;
+        let info: EsiTypeInfo = serde_json::from_str(json).unwrap();
+        assert_eq!(info.type_id, 34);
+        assert_eq!(info.name, "Tritanium");
+        assert_eq!(info.market_group_id, None);
+        assert!(!info.published);
+    }
+
+    #[test]
+    fn test_deserialize_group_info() {
+        let json = r#"{
+            "group_id": 25,
+            "name": "Frigate",
+            "category_id": 6,
+            "published": true,
+            "types": [587, 603, 608]
+        }"#;
+        let info: EsiGroupInfo = serde_json::from_str(json).unwrap();
+        assert_eq!(info.group_id, 25);
+        assert_eq!(info.name, "Frigate");
+        assert_eq!(info.category_id, 6);
+        assert_eq!(info.types.len(), 3);
+    }
+
+    #[test]
+    fn test_deserialize_category_info() {
+        let json = r#"{
+            "category_id": 6,
+            "name": "Ship",
+            "published": true,
+            "groups": [25, 26, 27]
+        }"#;
+        let info: EsiCategoryInfo = serde_json::from_str(json).unwrap();
+        assert_eq!(info.category_id, 6);
+        assert_eq!(info.name, "Ship");
+        assert_eq!(info.groups.len(), 3);
+    }
+
+    #[test]
+    fn test_deserialize_solar_system_info() {
+        let json = r#"{
+            "system_id": 30000142,
+            "name": "Jita",
+            "constellation_id": 20000020,
+            "security_status": 0.9459131,
+            "security_class": "B",
+            "star_id": 40009081,
+            "stargates": [50001248, 50001249],
+            "stations": [60003760],
+            "planets": [
+                {"planet_id": 40009082, "moons": [40009083], "asteroid_belts": []}
+            ]
+        }"#;
+        let info: EsiSolarSystemInfo = serde_json::from_str(json).unwrap();
+        assert_eq!(info.system_id, 30000142);
+        assert_eq!(info.name, "Jita");
+        assert!((info.security_status - 0.9459131).abs() < 0.0001);
+        assert_eq!(info.stargates.len(), 2);
+        assert_eq!(info.planets.len(), 1);
+        assert_eq!(info.planets[0].planet_id, 40009082);
+        assert_eq!(info.planets[0].moons, vec![40009083]);
+    }
+
+    #[test]
+    fn test_deserialize_constellation_info() {
+        let json = r#"{
+            "constellation_id": 20000020,
+            "name": "Kimotoro",
+            "region_id": 10000002,
+            "systems": [30000142, 30000143]
+        }"#;
+        let info: EsiConstellationInfo = serde_json::from_str(json).unwrap();
+        assert_eq!(info.constellation_id, 20000020);
+        assert_eq!(info.name, "Kimotoro");
+        assert_eq!(info.systems.len(), 2);
+    }
+
+    #[test]
+    fn test_deserialize_region_info() {
+        let json = r#"{
+            "region_id": 10000002,
+            "name": "The Forge",
+            "description": "Home of Jita",
+            "constellations": [20000020, 20000021]
+        }"#;
+        let info: EsiRegionInfo = serde_json::from_str(json).unwrap();
+        assert_eq!(info.region_id, 10000002);
+        assert_eq!(info.name, "The Forge");
+        assert_eq!(info.constellations.len(), 2);
+    }
+
+    #[test]
+    fn test_deserialize_station_info() {
+        let json = r#"{
+            "station_id": 60003760,
+            "name": "Jita IV - Moon 4 - Caldari Navy Assembly Plant",
+            "system_id": 30000142,
+            "type_id": 52678,
+            "owner": 1000035,
+            "race_id": 1,
+            "reprocessing_efficiency": 0.5,
+            "reprocessing_stations_take": 0.05,
+            "office_rental_cost": 1234567.89
+        }"#;
+        let info: EsiStationInfo = serde_json::from_str(json).unwrap();
+        assert_eq!(info.station_id, 60003760);
+        assert_eq!(info.system_id, 30000142);
+        assert_eq!(info.owner, Some(1000035));
+    }
+
+    #[test]
+    fn test_deserialize_stargate_info() {
+        let json = r#"{
+            "stargate_id": 50001248,
+            "name": "Stargate (Perimeter)",
+            "system_id": 30000142,
+            "type_id": 29624,
+            "destination": {"stargate_id": 50001249, "system_id": 30000144}
+        }"#;
+        let info: EsiStargateInfo = serde_json::from_str(json).unwrap();
+        assert_eq!(info.stargate_id, 50001248);
+        assert_eq!(info.destination.as_ref().unwrap().system_id, 30000144);
+    }
+
+    #[test]
+    fn test_deserialize_resolved_ids() {
+        let json = r#"{
+            "characters": [{"id": 95465499, "name": "CCP Bartender"}],
+            "systems": [{"id": 30000142, "name": "Jita"}]
+        }"#;
+        let resolved: EsiResolvedIds = serde_json::from_str(json).unwrap();
+        assert_eq!(resolved.characters.len(), 1);
+        assert_eq!(resolved.characters[0].id, 95465499);
+        assert_eq!(resolved.systems.len(), 1);
+        assert!(resolved.corporations.is_empty());
+    }
+
+    #[test]
+    fn test_deserialize_market_group_info() {
+        let json = r#"{
+            "market_group_id": 61,
+            "name": "Frigates",
+            "description": "Small ships",
+            "parent_group_id": 4,
+            "types": [587, 603]
+        }"#;
+        let info: EsiMarketGroupInfo = serde_json::from_str(json).unwrap();
+        assert_eq!(info.market_group_id, 61);
+        assert_eq!(info.name, "Frigates");
+        assert_eq!(info.parent_group_id, Some(4));
+        assert_eq!(info.types.len(), 2);
+    }
+
+    #[test]
+    fn test_deserialize_search_result() {
+        let json = r#"{
+            "solar_system": [30000142],
+            "station": [60003760, 60003761]
+        }"#;
+        let result: EsiSearchResult = serde_json::from_str(json).unwrap();
+        assert_eq!(result.solar_system, vec![30000142]);
+        assert_eq!(result.station.len(), 2);
+        assert!(result.character.is_empty());
+    }
+
+    #[test]
+    fn test_deserialize_killmail_ref() {
+        let json = r#"{"killmail_id": 123456789, "killmail_hash": "abc123def456"}"#;
+        let km: EsiKillmailRef = serde_json::from_str(json).unwrap();
+        assert_eq!(km.killmail_id, 123456789);
+        assert_eq!(km.killmail_hash, "abc123def456");
+    }
+
+    #[test]
+    fn test_deserialize_sovereignty_map() {
+        let json = r#"{"system_id": 30000001, "alliance_id": 99000001, "corporation_id": 98000001, "faction_id": null}"#;
+        let entry: EsiSovereigntyMap = serde_json::from_str(json).unwrap();
+        assert_eq!(entry.system_id, 30000001);
+        assert_eq!(entry.alliance_id, Some(99000001));
+        assert_eq!(entry.faction_id, None);
+    }
+
+    #[test]
+    fn test_deserialize_sovereignty_campaign() {
+        let json = r#"{"campaign_id": 1, "solar_system_id": 30000001, "structure_id": 1234567890, "event_type": "tcu_defense"}"#;
+        let campaign: EsiSovereigntyCampaign = serde_json::from_str(json).unwrap();
+        assert_eq!(campaign.campaign_id, 1);
+        assert_eq!(campaign.event_type, Some("tcu_defense".to_string()));
+    }
+
+    #[test]
+    fn test_deserialize_sovereignty_structure() {
+        let json = r#"{"alliance_id": 99000001, "solar_system_id": 30000001, "structure_id": 1234567890, "structure_type_id": 32226}"#;
+        let s: EsiSovereigntyStructure = serde_json::from_str(json).unwrap();
+        assert_eq!(s.alliance_id, 99000001);
+        assert_eq!(s.structure_type_id, 32226);
+    }
+
+    #[test]
+    fn test_deserialize_incursion() {
+        let json = r#"{
+            "constellation_id": 20000020,
+            "type": "Incursion",
+            "state": "established",
+            "staging_solar_system_id": 30000142,
+            "influence": 0.5,
+            "has_boss": true,
+            "faction_id": 500019,
+            "infested_solar_systems": [30000142, 30000143]
+        }"#;
+        let inc: EsiIncursion = serde_json::from_str(json).unwrap();
+        assert_eq!(inc.constellation_id, 20000020);
+        assert_eq!(inc.incursion_type, Some("Incursion".to_string()));
+        assert_eq!(inc.state, Some("established".to_string()));
+        assert!(inc.has_boss);
+        assert_eq!(inc.infested_solar_systems.len(), 2);
+    }
+
+    #[test]
+    fn test_deserialize_server_status() {
+        let json = r#"{"players": 23456, "server_version": "2345678", "start_time": "2026-03-20T11:00:00Z", "vip": false}"#;
+        let status: EsiServerStatus = serde_json::from_str(json).unwrap();
+        assert_eq!(status.players, 23456);
+        assert_eq!(status.server_version, Some("2345678".to_string()));
+        assert_eq!(status.vip, Some(false));
+    }
+
+    #[test]
+    fn test_deserialize_server_status_minimal() {
+        let json = r#"{"players": 100}"#;
+        let status: EsiServerStatus = serde_json::from_str(json).unwrap();
+        assert_eq!(status.players, 100);
+        assert_eq!(status.server_version, None);
+        assert_eq!(status.vip, None);
     }
 }
