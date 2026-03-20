@@ -19,39 +19,39 @@
 High-value public endpoints that don't require authentication.
 
 ### Universe / Static Data
-- [ ] `GET /universe/types/{type_id}/` — type info (name, description, group, market_group, etc.)
-- [ ] `GET /universe/types/` — list all type IDs (paginated)
-- [ ] `GET /universe/groups/{group_id}/` — inventory group info
-- [ ] `GET /universe/categories/{category_id}/` — inventory category info
-- [ ] `GET /universe/systems/{system_id}/` — solar system info (name, constellation, security)
-- [ ] `GET /universe/constellations/{constellation_id}/` — constellation info
-- [ ] `GET /universe/regions/{region_id}/` — region info (name, constellations)
-- [ ] `GET /universe/stations/{station_id}/` — NPC station info
-- [ ] `GET /universe/stargates/{stargate_id}/` — stargate info + destination
-- [ ] `POST /universe/ids/` — resolve names to IDs (reverse of `resolve_names`)
+- [x] `GET /universe/types/{type_id}/` — type info (name, description, group, market_group, etc.)
+- [x] `GET /universe/types/` — list all type IDs (paginated)
+- [x] `GET /universe/groups/{group_id}/` — inventory group info
+- [x] `GET /universe/categories/{category_id}/` — inventory category info
+- [x] `GET /universe/systems/{system_id}/` — solar system info (name, constellation, security)
+- [x] `GET /universe/constellations/{constellation_id}/` — constellation info
+- [x] `GET /universe/regions/{region_id}/` — region info (name, constellations)
+- [x] `GET /universe/stations/{station_id}/` — NPC station info
+- [x] `GET /universe/stargates/{stargate_id}/` — stargate info + destination
+- [x] `POST /universe/ids/` — resolve names to IDs (reverse of `resolve_names`)
 
 ### Market (additional)
-- [ ] `GET /markets/{region_id}/types/` — list all type IDs with active orders in a region
-- [ ] `GET /markets/groups/` — list market group IDs
-- [ ] `GET /markets/groups/{market_group_id}/` — market group info
+- [x] `GET /markets/{region_id}/types/` — list all type IDs with active orders in a region
+- [x] `GET /markets/groups/` — list market group IDs
+- [x] `GET /markets/groups/{market_group_id}/` — market group info
 
 ### Search
-- [ ] `GET /search/` — search for entities by name (public, unauthenticated)
+- [x] `GET /search/` — search for entities by name (public, unauthenticated)
 
 ### Killmails (additional)
-- [ ] `GET /characters/{character_id}/killmails/recent/` — recent killmails (authenticated)
-- [ ] `GET /corporations/{corporation_id}/killmails/recent/` — corp killmails (authenticated)
+- [x] `GET /characters/{character_id}/killmails/recent/` — recent killmails (authenticated)
+- [x] `GET /corporations/{corporation_id}/killmails/recent/` — corp killmails (authenticated)
 
 ### Sovereignty
-- [ ] `GET /sovereignty/map/` — sovereignty map (who owns what)
-- [ ] `GET /sovereignty/campaigns/` — active sovereignty campaigns
-- [ ] `GET /sovereignty/structures/` — sovereignty structures
+- [x] `GET /sovereignty/map/` — sovereignty map (who owns what)
+- [x] `GET /sovereignty/campaigns/` — active sovereignty campaigns
+- [x] `GET /sovereignty/structures/` — sovereignty structures
 
 ### Incursions
-- [ ] `GET /incursions/` — active incursions
+- [x] `GET /incursions/` — active incursions
 
 ### Status
-- [ ] `GET /status/` — server status (player count, server version)
+- [x] `GET /status/` — server status (player count, server version)
 
 ---
 
