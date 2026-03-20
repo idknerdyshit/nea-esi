@@ -1582,3 +1582,586 @@ async fn test_corp_starbase_detail() {
     assert_eq!(detail.fuels.len(), 1);
     assert_eq!(detail.fuels[0].type_id, 4051);
 }
+
+// ===========================================================================
+// Phase 4 — Supplementary & Niche Endpoints
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// get_dogma_attribute
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_get_dogma_attribute() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "attribute_id": 2,
+        "name": "isOnline",
+        "published": true,
+        "default_value": 0.0,
+        "stackable": true,
+        "high_is_good": true
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/dogma/attributes/2/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let attr = client.get_dogma_attribute(2).await.unwrap();
+
+    assert_eq!(attr.attribute_id, 2);
+    assert_eq!(attr.name, "isOnline");
+    assert!(attr.published);
+    assert!(attr.stackable);
+}
+
+// ---------------------------------------------------------------------------
+// get_dogma_effect
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_get_dogma_effect() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "effect_id": 16,
+        "name": "alwaysOn",
+        "published": false,
+        "effect_category": 0,
+        "modifiers": [
+            {
+                "domain": "shipID",
+                "func": "ItemModifier",
+                "modified_attribute_id": 9,
+                "modifying_attribute_id": 10,
+                "operator": 6
+            }
+        ]
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/dogma/effects/16/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let effect = client.get_dogma_effect(16).await.unwrap();
+
+    assert_eq!(effect.effect_id, 16);
+    assert_eq!(effect.name, "alwaysOn");
+    assert!(!effect.published);
+    assert_eq!(effect.modifiers.len(), 1);
+    assert_eq!(effect.modifiers[0].operator, Some(6));
+}
+
+// ---------------------------------------------------------------------------
+// get_dynamic_item
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_get_dynamic_item() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "created_by": 91234567,
+        "mutator_type_id": 47845,
+        "source_type_id": 2281,
+        "dogma_attributes": [
+            {"attribute_id": 9, "value": 1.5}
+        ],
+        "dogma_effects": [
+            {"effect_id": 16, "is_default": true}
+        ]
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/dogma/dynamic/items/2281/1234567890/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let item = client.get_dynamic_item(2281, 1234567890).await.unwrap();
+
+    assert_eq!(item.mutator_type_id, 47845);
+    assert_eq!(item.dogma_attributes.len(), 1);
+    assert!((item.dogma_attributes[0].value - 1.5).abs() < f64::EPSILON);
+    assert!(item.dogma_effects[0].is_default);
+}
+
+// ---------------------------------------------------------------------------
+// opportunity_group_ids
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_opportunity_group_ids() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/opportunities/groups/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&serde_json::json!([1, 2, 3])))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let ids = client.opportunity_group_ids().await.unwrap();
+    assert_eq!(ids, vec![1, 2, 3]);
+}
+
+// ---------------------------------------------------------------------------
+// opportunity_task_ids
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_opportunity_task_ids() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/opportunities/tasks/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&serde_json::json!([10, 20])))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let ids = client.opportunity_task_ids().await.unwrap();
+    assert_eq!(ids, vec![10, 20]);
+}
+
+// ---------------------------------------------------------------------------
+// character_opportunities
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_opportunities() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([
+        {"opportunity_id": 1, "completed_at": "2026-01-01T12:00:00Z"}
+    ]);
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/opportunities/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let opps = client.character_opportunities(91234567).await.unwrap();
+    assert_eq!(opps.len(), 1);
+    assert_eq!(opps[0].opportunity_id, 1);
+}
+
+// ---------------------------------------------------------------------------
+// character_fleet
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_fleet() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "fleet_id": 1234567890123_i64,
+        "role": "squad_member",
+        "squad_id": 111,
+        "wing_id": 222
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/fleet/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let fleet = client.character_fleet(91234567).await.unwrap();
+    assert_eq!(fleet.fleet_id, 1234567890123);
+    assert_eq!(fleet.role, "squad_member");
+}
+
+// ---------------------------------------------------------------------------
+// get_fleet
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_get_fleet() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "fleet_id": 1234567890123_i64,
+        "is_free_move": true,
+        "is_registered": false,
+        "is_voice_enabled": false,
+        "motd": "Welcome"
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/fleets/1234567890123/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let info = client.get_fleet(1234567890123).await.unwrap();
+    assert!(info.is_free_move);
+    assert_eq!(info.motd, Some("Welcome".to_string()));
+}
+
+// ---------------------------------------------------------------------------
+// fleet_members
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_fleet_members() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "character_id": 91234567,
+        "join_time": "2026-01-01T00:00:00Z",
+        "role": "squad_commander",
+        "role_name": "Squad Commander",
+        "ship_type_id": 587,
+        "solar_system_id": 30000142,
+        "squad_id": 111,
+        "takes_fleet_warp": true,
+        "wing_id": 222
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/fleets/1234567890123/members/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let members = client.fleet_members(1234567890123).await.unwrap();
+    assert_eq!(members.len(), 1);
+    assert_eq!(members[0].ship_type_id, 587);
+    assert!(members[0].takes_fleet_warp);
+}
+
+// ---------------------------------------------------------------------------
+// fleet_wings
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_fleet_wings() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "id": 222,
+        "name": "Wing 1",
+        "squads": [{"id": 111, "name": "Squad 1"}]
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/fleets/1234567890123/wings/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let wings = client.fleet_wings(1234567890123).await.unwrap();
+    assert_eq!(wings.len(), 1);
+    assert_eq!(wings[0].name, "Wing 1");
+    assert_eq!(wings[0].squads.len(), 1);
+    assert_eq!(wings[0].squads[0].name, "Squad 1");
+}
+
+// ---------------------------------------------------------------------------
+// get_war
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_get_war() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "id": 1941,
+        "declared": "2026-01-01T00:00:00Z",
+        "mutual": false,
+        "open_for_allies": true,
+        "aggressor": {
+            "corporation_id": 98000001,
+            "isk_destroyed": 1000000.0,
+            "ships_killed": 5
+        },
+        "defender": {
+            "corporation_id": 98000002,
+            "isk_destroyed": 500000.0,
+            "ships_killed": 2
+        },
+        "started": "2026-01-02T00:00:00Z",
+        "allies": [{"corporation_id": 98000003}]
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/wars/1941/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let war = client.get_war(1941).await.unwrap();
+    assert_eq!(war.id, 1941);
+    assert!(!war.mutual);
+    assert!(war.open_for_allies);
+    assert_eq!(war.aggressor.ships_killed, 5);
+    assert_eq!(war.allies.len(), 1);
+    assert!(war.started.is_some());
+}
+
+// ---------------------------------------------------------------------------
+// fw_stats
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_fw_stats() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "faction_id": 500001,
+        "pilots": 1234,
+        "systems_controlled": 20,
+        "kills": {"last_week": 100, "total": 5000, "yesterday": 15},
+        "victory_points": {"last_week": 200, "total": 10000, "yesterday": 30}
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/fw/stats/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let stats = client.fw_stats().await.unwrap();
+    assert_eq!(stats.len(), 1);
+    assert_eq!(stats[0].faction_id, 500001);
+    assert_eq!(stats[0].kills.total, 5000);
+    assert_eq!(stats[0].victory_points.yesterday, 30);
+}
+
+// ---------------------------------------------------------------------------
+// fw_systems
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_fw_systems() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "solar_system_id": 30002057,
+        "contested": "contested",
+        "occupier_faction_id": 500001,
+        "owner_faction_id": 500002,
+        "victory_points": 100,
+        "victory_points_threshold": 3000
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/fw/systems/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let systems = client.fw_systems().await.unwrap();
+    assert_eq!(systems.len(), 1);
+    assert_eq!(systems[0].contested, "contested");
+    assert_eq!(systems[0].victory_points_threshold, 3000);
+}
+
+// ---------------------------------------------------------------------------
+// fw_leaderboards
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_fw_leaderboards() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "kills": {
+            "active_total": [{"amount": 100, "id": 500001}],
+            "last_week": [],
+            "yesterday": []
+        },
+        "victory_points": {
+            "active_total": [],
+            "last_week": [{"amount": 200, "id": 500002}],
+            "yesterday": []
+        }
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/fw/leaderboards/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let lb = client.fw_leaderboards().await.unwrap();
+    assert_eq!(lb.kills.active_total.len(), 1);
+    assert_eq!(lb.kills.active_total[0].amount, 100);
+    assert_eq!(lb.victory_points.last_week.len(), 1);
+}
+
+// ---------------------------------------------------------------------------
+// fw_wars
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_fw_wars() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([
+        {"against_id": 500002, "faction_id": 500001},
+        {"against_id": 500001, "faction_id": 500002}
+    ]);
+
+    Mock::given(method("GET"))
+        .and(path("/fw/wars/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let wars = client.fw_wars().await.unwrap();
+    assert_eq!(wars.len(), 2);
+    assert_eq!(wars[0].faction_id, 500001);
+}
+
+// ---------------------------------------------------------------------------
+// insurance_prices
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_insurance_prices() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "type_id": 587,
+        "levels": [
+            {"cost": 10.0, "name": "Basic", "payout": 40.0},
+            {"cost": 20.0, "name": "Standard", "payout": 100.0}
+        ]
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/insurance/prices/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let prices = client.insurance_prices().await.unwrap();
+    assert_eq!(prices.len(), 1);
+    assert_eq!(prices[0].type_id, 587);
+    assert_eq!(prices[0].levels.len(), 2);
+    assert_eq!(prices[0].levels[0].name, "Basic");
+}
+
+// ---------------------------------------------------------------------------
+// get_route — basic
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_get_route_basic() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/route/30000142/30002187/"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(&serde_json::json!([30000142, 30000144, 30002187])),
+        )
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let route = client.get_route(30000142, 30002187, None, &[]).await.unwrap();
+    assert_eq!(route, vec![30000142, 30000144, 30002187]);
+}
+
+// ---------------------------------------------------------------------------
+// get_route — with flag and avoid
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_get_route_with_options() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/route/30000142/30002187/"))
+        .and(query_param("flag", "secure"))
+        .and(query_param("avoid", "30000144"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(&serde_json::json!([30000142, 30000145, 30002187])),
+        )
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let route = client
+        .get_route(30000142, 30002187, Some("secure"), &[30000144])
+        .await
+        .unwrap();
+    assert_eq!(route, vec![30000142, 30000145, 30002187]);
+}
+
+// ---------------------------------------------------------------------------
+// corp_alliance_history
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_alliance_history() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([
+        {"record_id": 1, "start_date": "2020-01-01T00:00:00Z", "alliance_id": 99000001},
+        {"record_id": 2, "start_date": "2022-06-15T00:00:00Z"}
+    ]);
+
+    Mock::given(method("GET"))
+        .and(path("/corporations/98000001/alliancehistory/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let history = client.corp_alliance_history(98000001).await.unwrap();
+    assert_eq!(history.len(), 2);
+    assert_eq!(history[0].alliance_id, Some(99000001));
+    assert_eq!(history[1].alliance_id, None);
+}
+
+// ---------------------------------------------------------------------------
+// character_corporation_history
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_corporation_history() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([
+        {"record_id": 1, "start_date": "2020-01-01T00:00:00Z", "corporation_id": 98000001},
+        {"record_id": 2, "start_date": "2023-03-01T00:00:00Z", "corporation_id": 98000002, "is_deleted": true}
+    ]);
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/corporationhistory/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let history = client.character_corporation_history(91234567).await.unwrap();
+    assert_eq!(history.len(), 2);
+    assert_eq!(history[0].corporation_id, 98000001);
+    assert!(!history[0].is_deleted);
+    assert!(history[1].is_deleted);
+}

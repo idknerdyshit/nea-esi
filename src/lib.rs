@@ -1324,6 +1324,300 @@ pub struct EsiStarbaseFuel {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 4 — Supplementary & Niche Endpoints
+// ---------------------------------------------------------------------------
+
+// Dogma types
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiDogmaAttribute {
+    pub attribute_id: i32,
+    pub name: String,
+    pub published: bool,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub icon_id: Option<i32>,
+    #[serde(default)]
+    pub default_value: f64,
+    #[serde(default)]
+    pub display_name: Option<String>,
+    #[serde(default)]
+    pub unit_id: Option<i32>,
+    #[serde(default)]
+    pub stackable: bool,
+    #[serde(default)]
+    pub high_is_good: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiDogmaEffect {
+    pub effect_id: i32,
+    pub name: String,
+    pub published: bool,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub icon_id: Option<i32>,
+    #[serde(default)]
+    pub display_name: Option<String>,
+    #[serde(default)]
+    pub effect_category: Option<i32>,
+    #[serde(default)]
+    pub is_assistance: bool,
+    #[serde(default)]
+    pub is_offensive: bool,
+    #[serde(default)]
+    pub is_warp_safe: bool,
+    #[serde(default)]
+    pub pre_expression: Option<i32>,
+    #[serde(default)]
+    pub post_expression: Option<i32>,
+    #[serde(default)]
+    pub duration_attribute_id: Option<i32>,
+    #[serde(default)]
+    pub tracking_speed_attribute_id: Option<i32>,
+    #[serde(default)]
+    pub discharge_attribute_id: Option<i32>,
+    #[serde(default)]
+    pub range_attribute_id: Option<i32>,
+    #[serde(default)]
+    pub falloff_attribute_id: Option<i32>,
+    #[serde(default)]
+    pub modifiers: Vec<EsiDogmaModifier>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiDogmaModifier {
+    #[serde(default)]
+    pub domain: Option<String>,
+    #[serde(default)]
+    pub effect_id: Option<i32>,
+    #[serde(default)]
+    pub func: Option<String>,
+    #[serde(default)]
+    pub modified_attribute_id: Option<i32>,
+    #[serde(default)]
+    pub modifying_attribute_id: Option<i32>,
+    #[serde(default)]
+    pub operator: Option<i32>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiDynamicItem {
+    pub created_by: i64,
+    pub mutator_type_id: i32,
+    pub source_type_id: i32,
+    #[serde(default)]
+    pub dogma_attributes: Vec<EsiDogmaAttributeValue>,
+    #[serde(default)]
+    pub dogma_effects: Vec<EsiDogmaEffectRef>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiDogmaAttributeValue {
+    pub attribute_id: i32,
+    pub value: f64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiDogmaEffectRef {
+    pub effect_id: i32,
+    pub is_default: bool,
+}
+
+// Opportunities types
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCompletedOpportunity {
+    pub opportunity_id: i32,
+    pub completed_at: DateTime<Utc>,
+}
+
+// Fleet types
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCharacterFleet {
+    pub fleet_id: i64,
+    pub role: String,
+    pub squad_id: i64,
+    pub wing_id: i64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiFleetInfo {
+    pub fleet_id: i64,
+    #[serde(default)]
+    pub is_free_move: bool,
+    #[serde(default)]
+    pub is_registered: bool,
+    #[serde(default)]
+    pub is_voice_enabled: bool,
+    #[serde(default)]
+    pub motd: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiFleetMember {
+    pub character_id: i64,
+    pub join_time: DateTime<Utc>,
+    pub role: String,
+    pub role_name: String,
+    pub ship_type_id: i32,
+    pub solar_system_id: i32,
+    pub squad_id: i64,
+    pub takes_fleet_warp: bool,
+    pub wing_id: i64,
+    #[serde(default)]
+    pub station_id: Option<i64>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiFleetWing {
+    pub id: i64,
+    pub name: String,
+    #[serde(default)]
+    pub squads: Vec<EsiFleetSquad>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiFleetSquad {
+    pub id: i64,
+    pub name: String,
+}
+
+// War types
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiWar {
+    pub id: i32,
+    pub declared: DateTime<Utc>,
+    pub mutual: bool,
+    pub open_for_allies: bool,
+    pub aggressor: EsiWarParty,
+    pub defender: EsiWarParty,
+    #[serde(default)]
+    pub started: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub finished: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub retracted: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub allies: Vec<EsiWarAlly>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiWarParty {
+    pub isk_destroyed: f64,
+    pub ships_killed: i32,
+    #[serde(default)]
+    pub alliance_id: Option<i64>,
+    #[serde(default)]
+    pub corporation_id: Option<i64>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiWarAlly {
+    #[serde(default)]
+    pub alliance_id: Option<i64>,
+    #[serde(default)]
+    pub corporation_id: Option<i64>,
+}
+
+// Faction Warfare types
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiFwFactionStats {
+    pub faction_id: i32,
+    pub pilots: i32,
+    pub systems_controlled: i32,
+    pub kills: EsiFwTotals,
+    pub victory_points: EsiFwTotals,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiFwTotals {
+    pub last_week: i32,
+    pub total: i32,
+    pub yesterday: i32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiFwSystem {
+    pub solar_system_id: i32,
+    pub contested: String,
+    pub occupier_faction_id: i32,
+    pub owner_faction_id: i32,
+    pub victory_points: i32,
+    pub victory_points_threshold: i32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiFwLeaderboards {
+    pub kills: EsiFwLeaderboardCategory,
+    pub victory_points: EsiFwLeaderboardCategory,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiFwLeaderboardCategory {
+    #[serde(default)]
+    pub active_total: Vec<EsiFwLeaderboardEntry>,
+    #[serde(default)]
+    pub last_week: Vec<EsiFwLeaderboardEntry>,
+    #[serde(default)]
+    pub yesterday: Vec<EsiFwLeaderboardEntry>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiFwLeaderboardEntry {
+    pub amount: i32,
+    pub id: i32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiFwWar {
+    pub against_id: i32,
+    pub faction_id: i32,
+}
+
+// Insurance types
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiInsurancePrice {
+    pub type_id: i32,
+    #[serde(default)]
+    pub levels: Vec<EsiInsuranceLevel>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiInsuranceLevel {
+    pub cost: f64,
+    pub name: String,
+    pub payout: f64,
+}
+
+// History types
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiAllianceHistoryEntry {
+    pub record_id: i32,
+    pub start_date: DateTime<Utc>,
+    #[serde(default)]
+    pub alliance_id: Option<i64>,
+    #[serde(default)]
+    pub is_deleted: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCorporationHistoryEntry {
+    pub record_id: i32,
+    pub start_date: DateTime<Utc>,
+    pub corporation_id: i64,
+    #[serde(default)]
+    pub is_deleted: bool,
+}
+
+// ---------------------------------------------------------------------------
 // ETag cache
 // ---------------------------------------------------------------------------
 

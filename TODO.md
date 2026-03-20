@@ -170,41 +170,41 @@ Corporation-level data — requires director/CEO roles.
 Lower-priority or niche endpoints.
 
 ### Dogma (item attributes)
-- [ ] `GET /dogma/attributes/{attribute_id}/` — attribute info
-- [ ] `GET /dogma/effects/{effect_id}/` — effect info
-- [ ] `GET /dogma/dynamic/items/{type_id}/{item_id}/` — mutated item stats
+- [x] `GET /dogma/attributes/{attribute_id}/` — attribute info
+- [x] `GET /dogma/effects/{effect_id}/` — effect info
+- [x] `GET /dogma/dynamic/items/{type_id}/{item_id}/` — mutated item stats
 
 ### Opportunities
-- [ ] `GET /opportunities/groups/` — opportunity groups
-- [ ] `GET /opportunities/tasks/` — opportunity tasks
-- [ ] `GET /characters/{character_id}/opportunities/` — completed tasks
+- [x] `GET /opportunities/groups/` — opportunity groups
+- [x] `GET /opportunities/tasks/` — opportunity tasks
+- [x] `GET /characters/{character_id}/opportunities/` — completed tasks
 
 ### Fleet
-- [ ] `GET /characters/{character_id}/fleet/` — current fleet
-- [ ] `GET /fleets/{fleet_id}/` — fleet info
-- [ ] `GET /fleets/{fleet_id}/members/` — fleet members
-- [ ] `GET /fleets/{fleet_id}/wings/` — fleet wings
+- [x] `GET /characters/{character_id}/fleet/` — current fleet
+- [x] `GET /fleets/{fleet_id}/` — fleet info
+- [x] `GET /fleets/{fleet_id}/members/` — fleet members
+- [x] `GET /fleets/{fleet_id}/wings/` — fleet wings
 
 ### Wars
-- [ ] `GET /wars/` — list active wars
-- [ ] `GET /wars/{war_id}/` — war details
-- [ ] `GET /wars/{war_id}/killmails/` — war killmails
+- [x] `GET /wars/` — list active wars
+- [x] `GET /wars/{war_id}/` — war details
+- [x] `GET /wars/{war_id}/killmails/` — war killmails
 
 ### Faction Warfare
-- [ ] `GET /fw/stats/` — faction warfare stats
-- [ ] `GET /fw/systems/` — contested systems
-- [ ] `GET /fw/leaderboards/` — leaderboards
-- [ ] `GET /fw/wars/` — faction warfare wars
+- [x] `GET /fw/stats/` — faction warfare stats
+- [x] `GET /fw/systems/` — contested systems
+- [x] `GET /fw/leaderboards/` — leaderboards
+- [x] `GET /fw/wars/` — faction warfare wars
 
 ### Insurance
-- [ ] `GET /insurance/prices/` — insurance prices for all ships
+- [x] `GET /insurance/prices/` — insurance prices for all ships
 
 ### Routes
-- [ ] `GET /route/{origin}/{destination}/` — shortest/safest/insecure route
+- [x] `GET /route/{origin}/{destination}/` — shortest/safest/insecure route
 
 ### Corporation Public Info (additional)
-- [ ] `GET /corporations/{corporation_id}/alliancehistory/` — alliance history
-- [ ] `GET /characters/{character_id}/corporationhistory/` — corp history
+- [x] `GET /corporations/{corporation_id}/alliancehistory/` — alliance history
+- [x] `GET /characters/{character_id}/corporationhistory/` — corp history
 
 ---
 

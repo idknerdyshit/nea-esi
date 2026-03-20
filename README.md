@@ -320,6 +320,67 @@ client.corp_starbases(corporation_id: i64) -> Vec<EsiCorpStarbase>
 client.corp_starbase_detail(corporation_id: i64, starbase_id: i64, system_id: i32) -> EsiCorpStarbaseDetail
 ```
 
+**Dogma:**
+
+```rust
+client.get_dogma_attribute(attribute_id: i32) -> EsiDogmaAttribute
+client.get_dogma_effect(effect_id: i32) -> EsiDogmaEffect
+client.get_dynamic_item(type_id: i32, item_id: i64) -> EsiDynamicItem
+```
+
+**Opportunities:**
+
+```rust
+client.opportunity_group_ids() -> Vec<i32>
+client.opportunity_task_ids() -> Vec<i32>
+client.character_opportunities(character_id: i64) -> Vec<EsiCompletedOpportunity>  // authenticated
+```
+
+**Fleet:**
+
+```rust
+client.character_fleet(character_id: i64) -> EsiCharacterFleet  // authenticated
+client.get_fleet(fleet_id: i64) -> EsiFleetInfo
+client.fleet_members(fleet_id: i64) -> Vec<EsiFleetMember>
+client.fleet_wings(fleet_id: i64) -> Vec<EsiFleetWing>
+```
+
+**Wars:**
+
+```rust
+client.list_war_ids() -> Vec<i32>  // paginated
+client.get_war(war_id: i32) -> EsiWar
+client.war_killmails(war_id: i32) -> Vec<EsiKillmailRef>  // paginated
+```
+
+**Faction Warfare:**
+
+```rust
+client.fw_stats() -> Vec<EsiFwFactionStats>
+client.fw_systems() -> Vec<EsiFwSystem>
+client.fw_leaderboards() -> EsiFwLeaderboards
+client.fw_wars() -> Vec<EsiFwWar>
+```
+
+**Insurance:**
+
+```rust
+client.insurance_prices() -> Vec<EsiInsurancePrice>
+```
+
+**Routes:**
+
+```rust
+client.get_route(origin: i32, destination: i32, flag: Option<&str>, avoid: &[i32]) -> Vec<i32>
+```
+
+**History:**
+
+```rust
+client.corp_alliance_history(corporation_id: i64) -> Vec<EsiAllianceHistoryEntry>
+client.character_corporation_history(character_id: i64) -> Vec<EsiCorporationHistoryEntry>
+```
+
 **Other:**
 
 ```rust
@@ -497,6 +558,58 @@ client.clear_cache().await
 
 **`EsiStarbaseFuel`** — `type_id: i32`, `quantity: i32`
 
+**`EsiDogmaAttribute`** — `attribute_id: i32`, `name: String`, `published: bool`, optional/default: `description`, `icon_id`, `default_value: f64`, `display_name`, `unit_id`, `stackable: bool`, `high_is_good: bool`
+
+**`EsiDogmaEffect`** — `effect_id: i32`, `name: String`, `published: bool`, optional/default: `description`, `icon_id`, `display_name`, `effect_category`, booleans (`is_assistance`, `is_offensive`, `is_warp_safe`), attribute IDs, `modifiers: Vec<EsiDogmaModifier>`
+
+**`EsiDogmaModifier`** — all optional: `domain`, `effect_id`, `func`, `modified_attribute_id`, `modifying_attribute_id`, `operator`
+
+**`EsiDynamicItem`** — `created_by: i64`, `mutator_type_id: i32`, `source_type_id: i32`, default-vec: `dogma_attributes`, `dogma_effects`
+
+**`EsiDogmaAttributeValue`** — `attribute_id: i32`, `value: f64`
+
+**`EsiDogmaEffectRef`** — `effect_id: i32`, `is_default: bool`
+
+**`EsiCompletedOpportunity`** — `opportunity_id: i32`, `completed_at: DateTime<Utc>`
+
+**`EsiCharacterFleet`** — `fleet_id: i64`, `role: String`, `squad_id: i64`, `wing_id: i64`
+
+**`EsiFleetInfo`** — `fleet_id: i64`, default: `is_free_move/is_registered/is_voice_enabled: bool`, optional: `motd`
+
+**`EsiFleetMember`** — `character_id: i64`, `join_time: DateTime<Utc>`, `role/role_name: String`, `ship_type_id: i32`, `solar_system_id: i32`, `squad_id/wing_id: i64`, `takes_fleet_warp: bool`, optional: `station_id`
+
+**`EsiFleetWing`** — `id: i64`, `name: String`, default-vec: `squads: Vec<EsiFleetSquad>`
+
+**`EsiFleetSquad`** — `id: i64`, `name: String`
+
+**`EsiWar`** — `id: i32`, `declared: DateTime<Utc>`, `mutual/open_for_allies: bool`, `aggressor/defender: EsiWarParty`, optional: `started`, `finished`, `retracted`, default-vec: `allies`
+
+**`EsiWarParty`** — `isk_destroyed: f64`, `ships_killed: i32`, optional: `alliance_id`, `corporation_id`
+
+**`EsiWarAlly`** — optional: `alliance_id`, `corporation_id`
+
+**`EsiFwFactionStats`** — `faction_id: i32`, `pilots: i32`, `systems_controlled: i32`, `kills/victory_points: EsiFwTotals`
+
+**`EsiFwTotals`** — `last_week: i32`, `total: i32`, `yesterday: i32`
+
+**`EsiFwSystem`** — `solar_system_id: i32`, `contested: String`, `occupier_faction_id/owner_faction_id: i32`, `victory_points/victory_points_threshold: i32`
+
+**`EsiFwLeaderboards`** — `kills/victory_points: EsiFwLeaderboardCategory`
+
+**`EsiFwLeaderboardCategory`** — default-vec: `active_total/last_week/yesterday: Vec<EsiFwLeaderboardEntry>`
+
+**`EsiFwLeaderboardEntry`** — `amount: i32`, `id: i32`
+
+**`EsiFwWar`** — `against_id: i32`, `faction_id: i32`
+
+**`EsiInsurancePrice`** — `type_id: i32`, default-vec: `levels: Vec<EsiInsuranceLevel>`
+
+**`EsiInsuranceLevel`** — `cost: f64`, `name: String`, `payout: f64`
+
+**`EsiAllianceHistoryEntry`** — `record_id: i32`, `start_date: DateTime<Utc>`, optional: `alliance_id: i64`, default: `is_deleted: bool`
+
+**`EsiCorporationHistoryEntry`** — `record_id: i32`, `start_date: DateTime<Utc>`, `corporation_id: i64`, default: `is_deleted: bool`
+
 **`EsiTokens`** — `access_token: SecretString`, `refresh_token: SecretString`, `expires_at: DateTime<Utc>`
 
 ### Error handling
@@ -550,6 +663,19 @@ client.clear_cache().await;
 ```
 
 Best for endpoints that change infrequently: `market_prices`, `get_character`, `get_corporation`, `get_alliance`, etc. Not used automatically for paginated endpoints.
+
+## Migrating from 0.5.x to 0.6.0
+
+No breaking changes. 0.6.0 adds 21 supplementary endpoints:
+
+- **Dogma**: `get_dogma_attribute`, `get_dogma_effect`, `get_dynamic_item`
+- **Opportunities**: `opportunity_group_ids`, `opportunity_task_ids`, `character_opportunities`
+- **Fleet**: `character_fleet`, `get_fleet`, `fleet_members`, `fleet_wings`
+- **Wars**: `list_war_ids`, `get_war`, `war_killmails`
+- **Faction Warfare**: `fw_stats`, `fw_systems`, `fw_leaderboards`, `fw_wars`
+- **Insurance**: `insurance_prices`
+- **Routes**: `get_route` (supports `flag` and `avoid` params)
+- **History**: `corp_alliance_history`, `character_corporation_history`
 
 ## Migrating from 0.4.x to 0.5.0
 

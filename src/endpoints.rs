@@ -4,21 +4,24 @@ use serde::de::DeserializeOwned;
 use tracing::debug;
 
 use crate::{
-    EsiAllianceInfo, EsiAssetItem, EsiAssetLocation, EsiAssetName, EsiAttributes, EsiBlueprint,
-    EsiBookmark, EsiBookmarkFolder, EsiCalendarEvent, EsiCalendarEventDetail, EsiCategoryInfo,
-    EsiCharacterInfo, EsiCharacterOrder, EsiClient, EsiClones, EsiConstellationInfo, EsiContact,
-    EsiContactLabel, EsiContract, EsiContractBid, EsiContractItem, EsiCorpMemberRole,
-    EsiCorpMemberTitle, EsiCorpMemberTracking, EsiCorpStarbase, EsiCorpStarbaseDetail,
-    EsiCorpStructure, EsiCorpWalletDivision, EsiCorporationInfo, EsiError, EsiFitting,
-    EsiGroupInfo, EsiIncursion, EsiIndustryJob, EsiKillmail, EsiKillmailRef, EsiLocation,
-    EsiLoyaltyPoints, EsiLoyaltyStoreOffer, EsiMailBody, EsiMailHeader, EsiMailLabels,
-    EsiMarketGroupInfo, EsiMarketHistoryEntry, EsiMarketOrder, EsiMarketPrice, EsiNewFitting,
-    EsiNewFittingResponse, EsiNewMail, EsiNotification, EsiOnlineStatus, EsiPlanetDetail,
-    EsiPlanetSummary, EsiRegionInfo, EsiResolvedIds, EsiResolvedName, EsiSearchResult,
-    EsiServerStatus, EsiShip, EsiSkillqueueEntry, EsiSkills, EsiSolarSystemInfo,
-    EsiSovereigntyCampaign, EsiSovereigntyMap, EsiSovereigntyStructure, EsiStargateInfo,
-    EsiStationInfo, EsiStructureInfo, EsiTypeInfo, EsiWalletJournalEntry, EsiWalletTransaction,
-    Result,
+    EsiAllianceHistoryEntry, EsiAllianceInfo, EsiAssetItem, EsiAssetLocation, EsiAssetName,
+    EsiAttributes, EsiBlueprint, EsiBookmark, EsiBookmarkFolder, EsiCalendarEvent,
+    EsiCalendarEventDetail, EsiCategoryInfo, EsiCharacterFleet, EsiCharacterInfo,
+    EsiCharacterOrder, EsiClient, EsiClones, EsiCompletedOpportunity, EsiConstellationInfo,
+    EsiContact, EsiContactLabel, EsiContract, EsiContractBid, EsiContractItem,
+    EsiCorpMemberRole, EsiCorpMemberTitle, EsiCorpMemberTracking, EsiCorpStarbase,
+    EsiCorpStarbaseDetail, EsiCorpStructure, EsiCorpWalletDivision, EsiCorporationHistoryEntry,
+    EsiCorporationInfo, EsiDogmaAttribute, EsiDogmaEffect, EsiDynamicItem, EsiError, EsiFitting,
+    EsiFleetInfo, EsiFleetMember, EsiFleetWing, EsiFwFactionStats, EsiFwLeaderboards, EsiFwSystem,
+    EsiFwWar, EsiGroupInfo, EsiIncursion, EsiIndustryJob, EsiInsurancePrice, EsiKillmail,
+    EsiKillmailRef, EsiLocation, EsiLoyaltyPoints, EsiLoyaltyStoreOffer, EsiMailBody,
+    EsiMailHeader, EsiMailLabels, EsiMarketGroupInfo, EsiMarketHistoryEntry, EsiMarketOrder,
+    EsiMarketPrice, EsiNewFitting, EsiNewFittingResponse, EsiNewMail, EsiNotification,
+    EsiOnlineStatus, EsiPlanetDetail, EsiPlanetSummary, EsiRegionInfo, EsiResolvedIds,
+    EsiResolvedName, EsiSearchResult, EsiServerStatus, EsiShip, EsiSkillqueueEntry, EsiSkills,
+    EsiSolarSystemInfo, EsiSovereigntyCampaign, EsiSovereigntyMap, EsiSovereigntyStructure,
+    EsiStargateInfo, EsiStationInfo, EsiStructureInfo, EsiTypeInfo, EsiWalletJournalEntry,
+    EsiWalletTransaction, EsiWar, Result,
 };
 
 const RESOLVE_NAMES_CHUNK_SIZE: usize = 1000;
@@ -1142,6 +1145,218 @@ impl EsiClient {
         self.get_json(&format!(
             "/corporations/{}/starbases/{}/?system_id={}",
             corporation_id, starbase_id, system_id
+        ))
+        .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Dogma endpoints
+    // -----------------------------------------------------------------------
+
+    /// Fetch a dogma attribute by ID.
+    #[tracing::instrument(skip(self))]
+    pub async fn get_dogma_attribute(&self, attribute_id: i32) -> Result<EsiDogmaAttribute> {
+        self.get_json(&format!("/dogma/attributes/{}/", attribute_id))
+            .await
+    }
+
+    /// Fetch a dogma effect by ID.
+    #[tracing::instrument(skip(self))]
+    pub async fn get_dogma_effect(&self, effect_id: i32) -> Result<EsiDogmaEffect> {
+        self.get_json(&format!("/dogma/effects/{}/", effect_id))
+            .await
+    }
+
+    /// Fetch a mutated (dynamic) item's stats.
+    #[tracing::instrument(skip(self))]
+    pub async fn get_dynamic_item(&self, type_id: i32, item_id: i64) -> Result<EsiDynamicItem> {
+        self.get_json(&format!("/dogma/dynamic/items/{}/{}/", type_id, item_id))
+            .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Opportunities endpoints
+    // -----------------------------------------------------------------------
+
+    /// Fetch all opportunity group IDs.
+    #[tracing::instrument(skip(self))]
+    pub async fn opportunity_group_ids(&self) -> Result<Vec<i32>> {
+        self.get_json("/opportunities/groups/").await
+    }
+
+    /// Fetch all opportunity task IDs.
+    #[tracing::instrument(skip(self))]
+    pub async fn opportunity_task_ids(&self) -> Result<Vec<i32>> {
+        self.get_json("/opportunities/tasks/").await
+    }
+
+    /// Fetch completed opportunities for a character (authenticated).
+    #[tracing::instrument(skip(self))]
+    pub async fn character_opportunities(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiCompletedOpportunity>> {
+        self.get_json(&format!("/characters/{}/opportunities/", character_id))
+            .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Fleet endpoints
+    // -----------------------------------------------------------------------
+
+    /// Fetch a character's current fleet (authenticated).
+    #[tracing::instrument(skip(self))]
+    pub async fn character_fleet(&self, character_id: i64) -> Result<EsiCharacterFleet> {
+        self.get_json(&format!("/characters/{}/fleet/", character_id))
+            .await
+    }
+
+    /// Fetch fleet information.
+    #[tracing::instrument(skip(self))]
+    pub async fn get_fleet(&self, fleet_id: i64) -> Result<EsiFleetInfo> {
+        self.get_json(&format!("/fleets/{}/", fleet_id)).await
+    }
+
+    /// Fetch fleet members.
+    #[tracing::instrument(skip(self))]
+    pub async fn fleet_members(&self, fleet_id: i64) -> Result<Vec<EsiFleetMember>> {
+        self.get_json(&format!("/fleets/{}/members/", fleet_id))
+            .await
+    }
+
+    /// Fetch fleet wings and squads.
+    #[tracing::instrument(skip(self))]
+    pub async fn fleet_wings(&self, fleet_id: i64) -> Result<Vec<EsiFleetWing>> {
+        self.get_json(&format!("/fleets/{}/wings/", fleet_id))
+            .await
+    }
+
+    // -----------------------------------------------------------------------
+    // War endpoints
+    // -----------------------------------------------------------------------
+
+    /// List active war IDs (paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn list_war_ids(&self) -> Result<Vec<i32>> {
+        self.get_paginated_json("/wars/").await
+    }
+
+    /// Fetch war details.
+    #[tracing::instrument(skip(self))]
+    pub async fn get_war(&self, war_id: i32) -> Result<EsiWar> {
+        self.get_json(&format!("/wars/{}/", war_id)).await
+    }
+
+    /// Fetch killmails for a war (paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn war_killmails(&self, war_id: i32) -> Result<Vec<EsiKillmailRef>> {
+        self.get_paginated_json(&format!("/wars/{}/killmails/", war_id))
+            .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Faction Warfare endpoints
+    // -----------------------------------------------------------------------
+
+    /// Fetch faction warfare statistics.
+    #[tracing::instrument(skip(self))]
+    pub async fn fw_stats(&self) -> Result<Vec<EsiFwFactionStats>> {
+        self.get_json("/fw/stats/").await
+    }
+
+    /// Fetch faction warfare contested systems.
+    #[tracing::instrument(skip(self))]
+    pub async fn fw_systems(&self) -> Result<Vec<EsiFwSystem>> {
+        self.get_json("/fw/systems/").await
+    }
+
+    /// Fetch faction warfare leaderboards.
+    #[tracing::instrument(skip(self))]
+    pub async fn fw_leaderboards(&self) -> Result<EsiFwLeaderboards> {
+        self.get_json("/fw/leaderboards/").await
+    }
+
+    /// Fetch faction warfare wars.
+    #[tracing::instrument(skip(self))]
+    pub async fn fw_wars(&self) -> Result<Vec<EsiFwWar>> {
+        self.get_json("/fw/wars/").await
+    }
+
+    // -----------------------------------------------------------------------
+    // Insurance endpoint
+    // -----------------------------------------------------------------------
+
+    /// Fetch insurance prices for all ship types.
+    #[tracing::instrument(skip(self))]
+    pub async fn insurance_prices(&self) -> Result<Vec<EsiInsurancePrice>> {
+        self.get_json("/insurance/prices/").await
+    }
+
+    // -----------------------------------------------------------------------
+    // Route endpoint
+    // -----------------------------------------------------------------------
+
+    /// Calculate a route between two solar systems.
+    ///
+    /// `flag` controls the pathfinding algorithm: `"shortest"` (default),
+    /// `"secure"`, or `"insecure"`.
+    /// `avoid` is a list of system IDs to avoid.
+    #[tracing::instrument(skip(self, avoid))]
+    pub async fn get_route(
+        &self,
+        origin: i32,
+        destination: i32,
+        flag: Option<&str>,
+        avoid: &[i32],
+    ) -> Result<Vec<i32>> {
+        let base = format!(
+            "{}/route/{}/{}/",
+            self.base_url, origin, destination
+        );
+        let mut url = url::Url::parse(&base)
+            .map_err(|e| EsiError::Internal(format!("failed to build route URL: {}", e)))?;
+
+        if let Some(f) = flag {
+            url.query_pairs_mut().append_pair("flag", f);
+        }
+        for &system_id in avoid {
+            url.query_pairs_mut()
+                .append_pair("avoid", &system_id.to_string());
+        }
+
+        self.request(url.as_str())
+            .await?
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))
+    }
+
+    // -----------------------------------------------------------------------
+    // History endpoints
+    // -----------------------------------------------------------------------
+
+    /// Fetch a corporation's alliance history.
+    #[tracing::instrument(skip(self))]
+    pub async fn corp_alliance_history(
+        &self,
+        corporation_id: i64,
+    ) -> Result<Vec<EsiAllianceHistoryEntry>> {
+        self.get_json(&format!(
+            "/corporations/{}/alliancehistory/",
+            corporation_id
+        ))
+        .await
+    }
+
+    /// Fetch a character's corporation history.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_corporation_history(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiCorporationHistoryEntry>> {
+        self.get_json(&format!(
+            "/characters/{}/corporationhistory/",
+            character_id
         ))
         .await
     }
