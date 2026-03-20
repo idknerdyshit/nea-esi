@@ -10,8 +10,9 @@ use crate::{
     EsiRegionInfo, EsiResolvedIds, EsiResolvedName, EsiSearchResult, EsiServerStatus,
     EsiSolarSystemInfo, EsiSovereigntyCampaign, EsiSovereigntyMap, EsiSovereigntyStructure,
     EsiBlueprint, EsiCharacterOrder, EsiContract, EsiContractBid, EsiContractItem,
-    EsiFitting, EsiIndustryJob, EsiLocation, EsiNewFitting, EsiNewFittingResponse,
-    EsiOnlineStatus, EsiShip, EsiSkillqueueEntry, EsiSkills, EsiAttributes,
+    EsiContact, EsiContactLabel, EsiFitting, EsiIndustryJob, EsiLocation, EsiMailBody,
+    EsiMailHeader, EsiMailLabels, EsiNewFitting, EsiNewFittingResponse, EsiNewMail,
+    EsiNotification, EsiOnlineStatus, EsiShip, EsiSkillqueueEntry, EsiSkills, EsiAttributes,
     EsiStargateInfo, EsiStationInfo, EsiStructureInfo, EsiTypeInfo, EsiWalletJournalEntry,
     EsiWalletTransaction, Result,
 };
@@ -374,6 +375,122 @@ impl EsiClient {
     ) -> Result<EsiOnlineStatus> {
         self.get_json(&format!("/characters/{}/online/", character_id))
             .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Mail endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch a character's mail headers (first batch).
+    #[tracing::instrument(skip(self))]
+    pub async fn character_mail(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiMailHeader>> {
+        self.get_json(&format!("/characters/{}/mail/", character_id))
+            .await
+    }
+
+    /// Fetch mail headers before a given mail ID (cursor pagination).
+    #[tracing::instrument(skip(self))]
+    pub async fn character_mail_before(
+        &self,
+        character_id: i64,
+        last_mail_id: i64,
+    ) -> Result<Vec<EsiMailHeader>> {
+        self.get_json(&format!(
+            "/characters/{}/mail/?last_mail_id={}",
+            character_id, last_mail_id
+        ))
+        .await
+    }
+
+    /// Fetch a single mail body.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_mail_body(
+        &self,
+        character_id: i64,
+        mail_id: i64,
+    ) -> Result<EsiMailBody> {
+        self.get_json(&format!(
+            "/characters/{}/mail/{}/",
+            character_id, mail_id
+        ))
+        .await
+    }
+
+    /// Send a mail. Returns the new mail ID.
+    #[tracing::instrument(skip(self, mail))]
+    pub async fn send_mail(
+        &self,
+        character_id: i64,
+        mail: &EsiNewMail,
+    ) -> Result<i32> {
+        let url = format!("{}/characters/{}/mail/", self.base_url, character_id);
+        let resp = self.request_post(&url, mail).await?;
+        resp.json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))
+    }
+
+    /// Fetch a character's mail labels.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_mail_labels(
+        &self,
+        character_id: i64,
+    ) -> Result<EsiMailLabels> {
+        self.get_json(&format!(
+            "/characters/{}/mail/labels/",
+            character_id
+        ))
+        .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Notification endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch a character's notifications.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_notifications(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiNotification>> {
+        self.get_json(&format!(
+            "/characters/{}/notifications/",
+            character_id
+        ))
+        .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Contact endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch a character's contacts (paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn character_contacts(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiContact>> {
+        self.get_paginated_json(&format!(
+            "/characters/{}/contacts/",
+            character_id
+        ))
+        .await
+    }
+
+    /// Fetch a character's contact labels.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_contact_labels(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiContactLabel>> {
+        self.get_json(&format!(
+            "/characters/{}/contacts/labels/",
+            character_id
+        ))
+        .await
     }
 
     // -----------------------------------------------------------------------

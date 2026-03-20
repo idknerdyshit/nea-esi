@@ -876,6 +876,124 @@ pub struct EsiOnlineStatus {
 }
 
 // ---------------------------------------------------------------------------
+// Mail types (Phase 2)
+// ---------------------------------------------------------------------------
+
+/// A mail header from a character's inbox.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiMailHeader {
+    pub mail_id: i64,
+    pub timestamp: DateTime<Utc>,
+    #[serde(default)]
+    pub from: Option<i64>,
+    #[serde(default)]
+    pub subject: Option<String>,
+    #[serde(default)]
+    pub is_read: Option<bool>,
+    #[serde(default)]
+    pub labels: Vec<i32>,
+    #[serde(default)]
+    pub recipients: Vec<EsiMailRecipient>,
+}
+
+/// A mail recipient (used in both GET and POST).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EsiMailRecipient {
+    pub recipient_id: i64,
+    pub recipient_type: String,
+}
+
+/// A mail body.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiMailBody {
+    #[serde(default)]
+    pub body: Option<String>,
+    #[serde(default)]
+    pub from: Option<i64>,
+    #[serde(default)]
+    pub read: Option<bool>,
+    #[serde(default)]
+    pub subject: Option<String>,
+    #[serde(default)]
+    pub timestamp: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub labels: Vec<i32>,
+    #[serde(default)]
+    pub recipients: Vec<EsiMailRecipient>,
+}
+
+/// Body for sending a new mail.
+#[derive(Debug, Clone, Serialize)]
+pub struct EsiNewMail {
+    pub recipients: Vec<EsiMailRecipient>,
+    pub subject: String,
+    pub body: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub approved_cost: Option<i64>,
+}
+
+/// Character mail labels.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiMailLabels {
+    pub total_unread_count: i32,
+    #[serde(default)]
+    pub labels: Vec<EsiMailLabel>,
+}
+
+/// A single mail label.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiMailLabel {
+    pub label_id: i32,
+    pub name: String,
+    #[serde(default)]
+    pub color: Option<String>,
+    #[serde(default)]
+    pub unread_count: Option<i32>,
+}
+
+// ---------------------------------------------------------------------------
+// Notification types (Phase 2)
+// ---------------------------------------------------------------------------
+
+/// A character notification.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiNotification {
+    pub notification_id: i64,
+    #[serde(rename = "type")]
+    pub notification_type: String,
+    pub sender_id: i64,
+    pub sender_type: String,
+    pub timestamp: DateTime<Utc>,
+    #[serde(default)]
+    pub is_read: Option<bool>,
+    #[serde(default)]
+    pub text: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Contact types (Phase 2)
+// ---------------------------------------------------------------------------
+
+/// A character contact.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiContact {
+    pub contact_id: i64,
+    pub contact_type: String,
+    pub standing: f64,
+    #[serde(default)]
+    pub label_ids: Vec<i64>,
+    #[serde(default)]
+    pub is_watched: Option<bool>,
+}
+
+/// A contact label.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiContactLabel {
+    pub label_id: i64,
+    pub label_name: String,
+}
+
+// ---------------------------------------------------------------------------
 // ETag cache
 // ---------------------------------------------------------------------------
 
@@ -1894,6 +2012,100 @@ mod tests {
     // -----------------------------------------------------------------------
     // Phase 2 deserialization tests — Fittings, Location
     // -----------------------------------------------------------------------
+
+    // -----------------------------------------------------------------------
+    // Phase 2 deserialization tests — Mail, Notifications, Contacts
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_deserialize_mail_header() {
+        let json = r#"{
+            "mail_id": 123456,
+            "timestamp": "2026-03-15T10:30:00Z",
+            "from": 91234567,
+            "subject": "Hello",
+            "is_read": false,
+            "labels": [1, 3],
+            "recipients": [{"recipient_id": 92345678, "recipient_type": "character"}]
+        }"#;
+        let header: EsiMailHeader = serde_json::from_str(json).unwrap();
+        assert_eq!(header.mail_id, 123456);
+        assert_eq!(header.from, Some(91234567));
+        assert_eq!(header.subject, Some("Hello".to_string()));
+        assert_eq!(header.labels, vec![1, 3]);
+        assert_eq!(header.recipients.len(), 1);
+    }
+
+    #[test]
+    fn test_deserialize_mail_body() {
+        let json = r#"{
+            "body": "<p>Hello world</p>",
+            "from": 91234567,
+            "read": true,
+            "subject": "Hello",
+            "timestamp": "2026-03-15T10:30:00Z",
+            "labels": [1],
+            "recipients": [{"recipient_id": 92345678, "recipient_type": "character"}]
+        }"#;
+        let body: EsiMailBody = serde_json::from_str(json).unwrap();
+        assert_eq!(body.body, Some("<p>Hello world</p>".to_string()));
+        assert_eq!(body.read, Some(true));
+    }
+
+    #[test]
+    fn test_deserialize_mail_labels() {
+        let json = r##"{
+            "total_unread_count": 5,
+            "labels": [{"label_id": 1, "name": "Inbox", "color": "#ffffff", "unread_count": 3}]
+        }"##;
+        let labels: EsiMailLabels = serde_json::from_str(json).unwrap();
+        assert_eq!(labels.total_unread_count, 5);
+        assert_eq!(labels.labels.len(), 1);
+        assert_eq!(labels.labels[0].name, "Inbox");
+    }
+
+    #[test]
+    fn test_deserialize_notification() {
+        let json = r#"{
+            "notification_id": 999888,
+            "type": "StructureUnderAttack",
+            "sender_id": 1000125,
+            "sender_type": "corporation",
+            "timestamp": "2026-03-15T10:30:00Z",
+            "is_read": false,
+            "text": "structureID: 1234567890"
+        }"#;
+        let notif: EsiNotification = serde_json::from_str(json).unwrap();
+        assert_eq!(notif.notification_id, 999888);
+        assert_eq!(notif.notification_type, "StructureUnderAttack");
+        assert_eq!(notif.sender_type, "corporation");
+        assert_eq!(notif.is_read, Some(false));
+    }
+
+    #[test]
+    fn test_deserialize_contact() {
+        let json = r#"{
+            "contact_id": 91234567,
+            "contact_type": "character",
+            "standing": 10.0,
+            "label_ids": [1, 2],
+            "is_watched": true
+        }"#;
+        let contact: EsiContact = serde_json::from_str(json).unwrap();
+        assert_eq!(contact.contact_id, 91234567);
+        assert_eq!(contact.contact_type, "character");
+        assert!((contact.standing - 10.0).abs() < f64::EPSILON);
+        assert_eq!(contact.label_ids, vec![1, 2]);
+        assert_eq!(contact.is_watched, Some(true));
+    }
+
+    #[test]
+    fn test_deserialize_contact_label() {
+        let json = r#"{"label_id": 1, "label_name": "Blues"}"#;
+        let label: EsiContactLabel = serde_json::from_str(json).unwrap();
+        assert_eq!(label.label_id, 1);
+        assert_eq!(label.label_name, "Blues");
+    }
 
     #[test]
     fn test_deserialize_fitting() {

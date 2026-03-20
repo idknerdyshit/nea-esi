@@ -221,6 +221,98 @@ async fn test_market_prices() {
 }
 
 // ---------------------------------------------------------------------------
+// character_mail — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_mail() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "mail_id": 123456,
+        "timestamp": "2026-03-15T10:30:00Z",
+        "from": 91234567,
+        "subject": "Hello",
+        "labels": [1],
+        "recipients": [{"recipient_id": 92345678, "recipient_type": "character"}]
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/mail/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let mail = client.character_mail(91234567).await.unwrap();
+
+    assert_eq!(mail.len(), 1);
+    assert_eq!(mail[0].mail_id, 123456);
+    assert_eq!(mail[0].subject, Some("Hello".to_string()));
+}
+
+// ---------------------------------------------------------------------------
+// character_notifications — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_notifications() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "notification_id": 999888,
+        "type": "StructureUnderAttack",
+        "sender_id": 1000125,
+        "sender_type": "corporation",
+        "timestamp": "2026-03-15T10:30:00Z"
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/notifications/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let notifs = client.character_notifications(91234567).await.unwrap();
+
+    assert_eq!(notifs.len(), 1);
+    assert_eq!(notifs[0].notification_type, "StructureUnderAttack");
+}
+
+// ---------------------------------------------------------------------------
+// character_contacts — paginated GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_contacts() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "contact_id": 91234567,
+        "contact_type": "character",
+        "standing": 10.0
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/contacts/"))
+        .and(query_param("page", "1"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(&body)
+                .insert_header("x-pages", "1"),
+        )
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let contacts = client.character_contacts(91234567).await.unwrap();
+
+    assert_eq!(contacts.len(), 1);
+    assert_eq!(contacts[0].contact_type, "character");
+}
+
+// ---------------------------------------------------------------------------
 // character_fittings — simple GET
 // ---------------------------------------------------------------------------
 
