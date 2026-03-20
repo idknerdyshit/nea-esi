@@ -1364,9 +1364,9 @@ impl EsiClient {
         T: DeserializeOwned + Send + 'static,
         B: Serialize + Sync,
     {
-        let body_value = serde_json::to_value(body)
+        let body_bytes = serde_json::to_vec(body)
             .map_err(|e| EsiError::Internal(format!("failed to serialize body: {}", e)))?;
-        self.paginated_fetch(base_url, PageFetcher::Post(Arc::new(body_value)))
+        self.paginated_fetch(base_url, PageFetcher::Post(Arc::new(body_bytes)))
             .await
     }
 
@@ -1381,7 +1381,7 @@ impl EsiClient {
 
         let resp = match &fetcher {
             PageFetcher::Get => self.request(&first_url).await?,
-            PageFetcher::Post(body) => self.request_post(&first_url, body.as_ref()).await?,
+            PageFetcher::Post(body) => self.request_post_raw(&first_url, body).await?,
         };
 
         let total_pages: i32 = resp
@@ -1406,7 +1406,7 @@ impl EsiClient {
                     let resp = match &fetcher {
                         PageFetcher::Get => this.request(&url).await?,
                         PageFetcher::Post(body) => {
-                            this.request_post(&url, body.as_ref()).await?
+                            this.request_post_raw(&url, body).await?
                         }
                     };
                     let page_items: Vec<T> = resp
@@ -1616,10 +1616,31 @@ impl EsiClient {
         url: &str,
         body: &impl Serialize,
     ) -> Result<reqwest::Response> {
-        let body_value = serde_json::to_value(body)
+        let body_bytes = serde_json::to_vec(body)
             .map_err(|e| EsiError::Internal(format!("failed to serialize body: {}", e)))?;
-        self.execute_request(url, move |client, url| client.post(url).json(&body_value))
-            .await
+        self.execute_request(url, move |client, url| {
+            client
+                .post(url)
+                .header("content-type", "application/json")
+                .body(body_bytes.clone())
+        })
+        .await
+    }
+
+    /// Make a rate-limited POST request with a pre-serialized JSON body.
+    async fn request_post_raw(
+        &self,
+        url: &str,
+        body: &Arc<Vec<u8>>,
+    ) -> Result<reqwest::Response> {
+        let body = Arc::clone(body);
+        self.execute_request(url, move |client, url| {
+            client
+                .post(url)
+                .header("content-type", "application/json")
+                .body(body.as_ref().clone())
+        })
+        .await
     }
 
     /// Make a rate-limited DELETE request.
@@ -1633,7 +1654,7 @@ impl EsiClient {
 #[derive(Clone)]
 enum PageFetcher {
     Get,
-    Post(Arc<serde_json::Value>),
+    Post(Arc<Vec<u8>>),
 }
 
 impl Default for EsiClient {

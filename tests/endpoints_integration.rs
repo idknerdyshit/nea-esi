@@ -3,7 +3,85 @@
 use wiremock::matchers::{method, path, query_param, body_json};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use nea_esi::EsiClient;
+use nea_esi::{EsiClient, EsiNewFitting, EsiFittingItem, EsiNewMail, EsiMailRecipient};
+
+// ---------------------------------------------------------------------------
+// create_fitting — POST
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_create_fitting() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .and(path("/characters/91234567/fittings/"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(serde_json::json!({"fitting_id": 99999})),
+        )
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let fitting = EsiNewFitting {
+        name: "Test Fit".to_string(),
+        description: "A test".to_string(),
+        ship_type_id: 587,
+        items: vec![EsiFittingItem {
+            type_id: 2032,
+            flag: 11,
+            quantity: 1,
+        }],
+    };
+    let fitting_id = client.create_fitting(91234567, &fitting).await.unwrap();
+    assert_eq!(fitting_id, 99999);
+}
+
+// ---------------------------------------------------------------------------
+// delete_fitting — DELETE
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_delete_fitting() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("DELETE"))
+        .and(path("/characters/91234567/fittings/99999/"))
+        .respond_with(ResponseTemplate::new(204))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    client.delete_fitting(91234567, 99999).await.unwrap();
+}
+
+// ---------------------------------------------------------------------------
+// send_mail — POST
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_send_mail() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .and(path("/characters/91234567/mail/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!(12345)))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let mail = EsiNewMail {
+        recipients: vec![EsiMailRecipient {
+            recipient_id: 92345678,
+            recipient_type: "character".to_string(),
+        }],
+        subject: "Test".to_string(),
+        body: "Hello".to_string(),
+        approved_cost: None,
+    };
+    let mail_id = client.send_mail(91234567, &mail).await.unwrap();
+    assert_eq!(mail_id, 12345);
+}
 
 // ---------------------------------------------------------------------------
 // get_type — simple GET

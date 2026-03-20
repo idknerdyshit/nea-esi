@@ -4,19 +4,19 @@ use serde::de::DeserializeOwned;
 use tracing::debug;
 
 use crate::{
-    EsiAllianceInfo, EsiAssetItem, EsiCategoryInfo, EsiCharacterInfo, EsiClient,
-    EsiConstellationInfo, EsiCorporationInfo, EsiError, EsiGroupInfo, EsiIncursion, EsiKillmail,
-    EsiKillmailRef, EsiMarketGroupInfo, EsiMarketHistoryEntry, EsiMarketOrder, EsiMarketPrice,
-    EsiRegionInfo, EsiResolvedIds, EsiResolvedName, EsiSearchResult, EsiServerStatus,
-    EsiSolarSystemInfo, EsiSovereigntyCampaign, EsiSovereigntyMap, EsiSovereigntyStructure,
-    EsiBlueprint, EsiCharacterOrder, EsiContract, EsiContractBid, EsiContractItem,
-    EsiBookmark, EsiBookmarkFolder, EsiCalendarEvent, EsiCalendarEventDetail, EsiClones,
-    EsiContact, EsiContactLabel, EsiFitting, EsiIndustryJob, EsiLocation, EsiLoyaltyPoints,
-    EsiLoyaltyStoreOffer, EsiMailBody, EsiMailHeader, EsiMailLabels, EsiNewFitting,
+    EsiAllianceInfo, EsiAssetItem, EsiAttributes, EsiBlueprint, EsiBookmark, EsiBookmarkFolder,
+    EsiCalendarEvent, EsiCalendarEventDetail, EsiCategoryInfo, EsiCharacterInfo,
+    EsiCharacterOrder, EsiClient, EsiClones, EsiConstellationInfo, EsiContact, EsiContactLabel,
+    EsiContract, EsiContractBid, EsiContractItem, EsiCorporationInfo, EsiError, EsiFitting,
+    EsiGroupInfo, EsiIncursion, EsiIndustryJob, EsiKillmail, EsiKillmailRef, EsiLocation,
+    EsiLoyaltyPoints, EsiLoyaltyStoreOffer, EsiMailBody, EsiMailHeader, EsiMailLabels,
+    EsiMarketGroupInfo, EsiMarketHistoryEntry, EsiMarketOrder, EsiMarketPrice, EsiNewFitting,
     EsiNewFittingResponse, EsiNewMail, EsiNotification, EsiOnlineStatus, EsiPlanetDetail,
-    EsiPlanetSummary, EsiShip, EsiSkillqueueEntry, EsiSkills, EsiAttributes,
-    EsiStargateInfo, EsiStationInfo, EsiStructureInfo, EsiTypeInfo, EsiWalletJournalEntry,
-    EsiWalletTransaction, Result,
+    EsiPlanetSummary, EsiRegionInfo, EsiResolvedIds, EsiResolvedName, EsiSearchResult,
+    EsiServerStatus, EsiShip, EsiSkillqueueEntry, EsiSkills, EsiSolarSystemInfo,
+    EsiSovereigntyCampaign, EsiSovereigntyMap, EsiSovereigntyStructure, EsiStargateInfo,
+    EsiStationInfo, EsiStructureInfo, EsiTypeInfo, EsiWalletJournalEntry, EsiWalletTransaction,
+    Result,
 };
 
 const RESOLVE_NAMES_CHUNK_SIZE: usize = 1000;
@@ -34,6 +34,26 @@ impl EsiClient {
         resp.json()
             .await
             .map_err(|e| EsiError::Deserialize(e.to_string()))
+    }
+
+    /// POST a path relative to `base_url` with a JSON body, deserialize the response.
+    async fn post_json<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        body: &impl serde::Serialize,
+    ) -> Result<T> {
+        let url = format!("{}{}", self.base_url, path);
+        let resp = self.request_post(&url, body).await?;
+        resp.json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))
+    }
+
+    /// DELETE a path relative to `base_url`, discarding the response body.
+    async fn delete_path(&self, path: &str) -> Result<()> {
+        let url = format!("{}{}", self.base_url, path);
+        let _resp = self.request_delete(&url).await?;
+        Ok(())
     }
 
     /// GET a paginated path relative to `base_url` and collect all pages.
@@ -321,12 +341,9 @@ impl EsiClient {
         character_id: i64,
         fitting: &EsiNewFitting,
     ) -> Result<i64> {
-        let url = format!("{}/characters/{}/fittings/", self.base_url, character_id);
-        let resp = self.request_post(&url, fitting).await?;
-        let result: EsiNewFittingResponse = resp
-            .json()
-            .await
-            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        let result: EsiNewFittingResponse = self
+            .post_json(&format!("/characters/{}/fittings/", character_id), fitting)
+            .await?;
         Ok(result.fitting_id)
     }
 
@@ -337,12 +354,11 @@ impl EsiClient {
         character_id: i64,
         fitting_id: i64,
     ) -> Result<()> {
-        let url = format!(
-            "{}/characters/{}/fittings/{}/",
-            self.base_url, character_id, fitting_id
-        );
-        let _resp = self.request_delete(&url).await?;
-        Ok(())
+        self.delete_path(&format!(
+            "/characters/{}/fittings/{}/",
+            character_id, fitting_id
+        ))
+        .await
     }
 
     // -----------------------------------------------------------------------
@@ -428,11 +444,8 @@ impl EsiClient {
         character_id: i64,
         mail: &EsiNewMail,
     ) -> Result<i32> {
-        let url = format!("{}/characters/{}/mail/", self.base_url, character_id);
-        let resp = self.request_post(&url, mail).await?;
-        resp.json()
+        self.post_json(&format!("/characters/{}/mail/", character_id), mail)
             .await
-            .map_err(|e| EsiError::Deserialize(e.to_string()))
     }
 
     /// Fetch a character's mail labels.
@@ -651,15 +664,11 @@ impl EsiClient {
             return Ok(Vec::new());
         }
 
-        let url = format!("{}/universe/names/", self.base_url);
         let mut all_names = Vec::with_capacity(ids.len());
 
         for chunk in ids.chunks(RESOLVE_NAMES_CHUNK_SIZE) {
-            let resp = self.request_post(&url, &chunk).await?;
-            let names: Vec<EsiResolvedName> = resp
-                .json()
-                .await
-                .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+            let names: Vec<EsiResolvedName> =
+                self.post_json("/universe/names/", &chunk).await?;
             all_names.extend(names);
         }
 
@@ -761,15 +770,11 @@ impl EsiClient {
             return Ok(EsiResolvedIds::default());
         }
 
-        let url = format!("{}/universe/ids/", self.base_url);
         let mut merged = EsiResolvedIds::default();
 
         for chunk in names.chunks(RESOLVE_IDS_CHUNK_SIZE) {
-            let resp = self.request_post(&url, &chunk).await?;
-            let resolved: EsiResolvedIds = resp
-                .json()
-                .await
-                .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+            let resolved: EsiResolvedIds =
+                self.post_json("/universe/ids/", &chunk).await?;
             merged.merge(resolved);
         }
 
