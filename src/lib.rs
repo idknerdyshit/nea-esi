@@ -994,6 +994,182 @@ pub struct EsiContactLabel {
 }
 
 // ---------------------------------------------------------------------------
+// Bookmark types (Phase 2)
+// ---------------------------------------------------------------------------
+
+/// A personal bookmark.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiBookmark {
+    pub bookmark_id: i64,
+    pub created: DateTime<Utc>,
+    pub location_id: i32,
+    pub creator_id: i64,
+    #[serde(default)]
+    pub label: Option<String>,
+    #[serde(default)]
+    pub notes: Option<String>,
+    #[serde(default)]
+    pub folder_id: Option<i32>,
+    #[serde(default)]
+    pub item: Option<EsiBookmarkItem>,
+    #[serde(default)]
+    pub coordinates: Option<EsiBookmarkCoordinates>,
+}
+
+/// An item referenced by a bookmark.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiBookmarkItem {
+    pub item_id: i64,
+    pub type_id: i32,
+}
+
+/// Bookmark coordinates in space.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiBookmarkCoordinates {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+}
+
+/// A bookmark folder.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiBookmarkFolder {
+    pub folder_id: i32,
+    pub name: String,
+}
+
+// ---------------------------------------------------------------------------
+// Calendar types (Phase 2)
+// ---------------------------------------------------------------------------
+
+/// A calendar event summary.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCalendarEvent {
+    pub event_id: i64,
+    pub event_date: DateTime<Utc>,
+    pub title: String,
+    #[serde(default)]
+    pub importance: Option<i32>,
+    #[serde(default)]
+    pub event_response: Option<String>,
+}
+
+/// A calendar event detail.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCalendarEventDetail {
+    pub event_id: i64,
+    pub date: DateTime<Utc>,
+    pub title: String,
+    pub owner_id: i64,
+    pub owner_name: String,
+    pub owner_type: String,
+    pub duration: i32,
+    #[serde(default)]
+    pub text: Option<String>,
+    #[serde(default)]
+    pub importance: Option<i32>,
+    #[serde(default)]
+    pub response: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Clone types (Phase 2)
+// ---------------------------------------------------------------------------
+
+/// Character clones info.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiClones {
+    #[serde(default)]
+    pub home_location: Option<EsiCloneLocation>,
+    #[serde(default)]
+    pub last_clone_jump_date: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub last_station_change_date: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub jump_clones: Vec<EsiJumpClone>,
+}
+
+/// A clone home location.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCloneLocation {
+    pub location_id: i64,
+    pub location_type: String,
+}
+
+/// A jump clone.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiJumpClone {
+    pub jump_clone_id: i64,
+    pub location_id: i64,
+    pub location_type: String,
+    #[serde(default)]
+    pub implants: Vec<i32>,
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Loyalty types (Phase 2)
+// ---------------------------------------------------------------------------
+
+/// LP balance with a corporation.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiLoyaltyPoints {
+    pub corporation_id: i64,
+    pub loyalty_points: i32,
+}
+
+/// An LP store offer.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiLoyaltyStoreOffer {
+    pub offer_id: i32,
+    pub type_id: i32,
+    pub quantity: i32,
+    pub lp_cost: i32,
+    pub isk_cost: i64,
+    #[serde(default)]
+    pub ak_cost: Option<i32>,
+    #[serde(default)]
+    pub required_items: Vec<EsiLoyaltyRequiredItem>,
+}
+
+/// A required item for an LP store offer.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiLoyaltyRequiredItem {
+    pub type_id: i32,
+    pub quantity: i32,
+}
+
+// ---------------------------------------------------------------------------
+// PI types (Phase 2)
+// ---------------------------------------------------------------------------
+
+/// A planetary colony summary.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiPlanetSummary {
+    pub solar_system_id: i32,
+    pub planet_id: i32,
+    pub planet_type: String,
+    pub num_pins: i32,
+    pub last_update: DateTime<Utc>,
+    pub upgrade_level: i32,
+    #[serde(default)]
+    pub owner_id: Option<i64>,
+}
+
+/// Detailed planetary colony layout. Uses `serde_json::Value` for complex
+/// nested PI structures; typed access is deferred to a future release.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiPlanetDetail {
+    #[serde(default)]
+    pub links: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub pins: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub routes: Vec<serde_json::Value>,
+}
+
+// ---------------------------------------------------------------------------
 // ETag cache
 // ---------------------------------------------------------------------------
 
@@ -2016,6 +2192,142 @@ mod tests {
     // -----------------------------------------------------------------------
     // Phase 2 deserialization tests — Mail, Notifications, Contacts
     // -----------------------------------------------------------------------
+
+    // -----------------------------------------------------------------------
+    // Phase 2 deserialization tests — Bookmarks, Calendar, Clones, Loyalty, PI
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_deserialize_bookmark() {
+        let json = r#"{
+            "bookmark_id": 12345,
+            "created": "2026-03-15T10:00:00Z",
+            "location_id": 30000142,
+            "creator_id": 91234567,
+            "label": "Home",
+            "notes": "My safe spot",
+            "folder_id": 5,
+            "item": {"item_id": 1234567890, "type_id": 35832},
+            "coordinates": {"x": 1.0, "y": 2.0, "z": 3.0}
+        }"#;
+        let bm: EsiBookmark = serde_json::from_str(json).unwrap();
+        assert_eq!(bm.bookmark_id, 12345);
+        assert_eq!(bm.label, Some("Home".to_string()));
+        assert_eq!(bm.item.as_ref().unwrap().type_id, 35832);
+        assert!((bm.coordinates.as_ref().unwrap().x - 1.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_deserialize_bookmark_folder() {
+        let json = r#"{"folder_id": 5, "name": "PvP Spots"}"#;
+        let folder: EsiBookmarkFolder = serde_json::from_str(json).unwrap();
+        assert_eq!(folder.folder_id, 5);
+        assert_eq!(folder.name, "PvP Spots");
+    }
+
+    #[test]
+    fn test_deserialize_calendar_event() {
+        let json = r#"{
+            "event_id": 99999,
+            "event_date": "2026-03-20T19:00:00Z",
+            "title": "Fleet Op",
+            "importance": 0,
+            "event_response": "accepted"
+        }"#;
+        let event: EsiCalendarEvent = serde_json::from_str(json).unwrap();
+        assert_eq!(event.event_id, 99999);
+        assert_eq!(event.title, "Fleet Op");
+        assert_eq!(event.event_response, Some("accepted".to_string()));
+    }
+
+    #[test]
+    fn test_deserialize_calendar_event_detail() {
+        let json = r#"{
+            "event_id": 99999,
+            "date": "2026-03-20T19:00:00Z",
+            "title": "Fleet Op",
+            "owner_id": 98000001,
+            "owner_name": "Test Corp",
+            "owner_type": "corporation",
+            "duration": 60,
+            "text": "Bring your best ships"
+        }"#;
+        let detail: EsiCalendarEventDetail = serde_json::from_str(json).unwrap();
+        assert_eq!(detail.event_id, 99999);
+        assert_eq!(detail.duration, 60);
+        assert_eq!(detail.text, Some("Bring your best ships".to_string()));
+    }
+
+    #[test]
+    fn test_deserialize_clones() {
+        let json = r#"{
+            "home_location": {"location_id": 60003760, "location_type": "station"},
+            "jump_clones": [
+                {"jump_clone_id": 1, "location_id": 60008494, "location_type": "station", "implants": [9899, 9941], "name": "Amarr clone"}
+            ],
+            "last_clone_jump_date": "2026-03-10T00:00:00Z"
+        }"#;
+        let clones: EsiClones = serde_json::from_str(json).unwrap();
+        assert_eq!(clones.home_location.as_ref().unwrap().location_id, 60003760);
+        assert_eq!(clones.jump_clones.len(), 1);
+        assert_eq!(clones.jump_clones[0].implants, vec![9899, 9941]);
+        assert_eq!(clones.jump_clones[0].name, Some("Amarr clone".to_string()));
+    }
+
+    #[test]
+    fn test_deserialize_loyalty_points() {
+        let json = r#"{"corporation_id": 1000035, "loyalty_points": 50000}"#;
+        let lp: EsiLoyaltyPoints = serde_json::from_str(json).unwrap();
+        assert_eq!(lp.corporation_id, 1000035);
+        assert_eq!(lp.loyalty_points, 50000);
+    }
+
+    #[test]
+    fn test_deserialize_loyalty_store_offer() {
+        let json = r#"{
+            "offer_id": 100,
+            "type_id": 587,
+            "quantity": 1,
+            "lp_cost": 5000,
+            "isk_cost": 1000000,
+            "required_items": [{"type_id": 34, "quantity": 1000}]
+        }"#;
+        let offer: EsiLoyaltyStoreOffer = serde_json::from_str(json).unwrap();
+        assert_eq!(offer.offer_id, 100);
+        assert_eq!(offer.lp_cost, 5000);
+        assert_eq!(offer.required_items.len(), 1);
+        assert_eq!(offer.required_items[0].type_id, 34);
+    }
+
+    #[test]
+    fn test_deserialize_planet_summary() {
+        let json = r#"{
+            "solar_system_id": 30000142,
+            "planet_id": 40009082,
+            "planet_type": "temperate",
+            "num_pins": 5,
+            "last_update": "2026-03-15T10:00:00Z",
+            "upgrade_level": 4
+        }"#;
+        let planet: EsiPlanetSummary = serde_json::from_str(json).unwrap();
+        assert_eq!(planet.planet_id, 40009082);
+        assert_eq!(planet.planet_type, "temperate");
+        assert_eq!(planet.num_pins, 5);
+        assert_eq!(planet.upgrade_level, 4);
+    }
+
+    #[test]
+    fn test_deserialize_planet_detail() {
+        let json = r#"{
+            "links": [{"source_pin_id": 1, "destination_pin_id": 2}],
+            "pins": [{"pin_id": 1, "type_id": 2254}],
+            "routes": []
+        }"#;
+        let detail: EsiPlanetDetail = serde_json::from_str(json).unwrap();
+        assert_eq!(detail.links.len(), 1);
+        assert_eq!(detail.pins.len(), 1);
+        assert!(detail.routes.is_empty());
+    }
 
     #[test]
     fn test_deserialize_mail_header() {

@@ -221,6 +221,170 @@ async fn test_market_prices() {
 }
 
 // ---------------------------------------------------------------------------
+// character_bookmarks — paginated GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_bookmarks() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "bookmark_id": 12345,
+        "created": "2026-03-15T10:00:00Z",
+        "location_id": 30000142,
+        "creator_id": 91234567,
+        "label": "Home"
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/bookmarks/"))
+        .and(query_param("page", "1"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(&body)
+                .insert_header("x-pages", "1"),
+        )
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let bookmarks = client.character_bookmarks(91234567).await.unwrap();
+
+    assert_eq!(bookmarks.len(), 1);
+    assert_eq!(bookmarks[0].bookmark_id, 12345);
+}
+
+// ---------------------------------------------------------------------------
+// character_calendar — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_calendar() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "event_id": 99999,
+        "event_date": "2026-03-20T19:00:00Z",
+        "title": "Fleet Op"
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/calendar/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let events = client.character_calendar(91234567).await.unwrap();
+
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].title, "Fleet Op");
+}
+
+// ---------------------------------------------------------------------------
+// character_clones — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_clones() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "home_location": {"location_id": 60003760, "location_type": "station"},
+        "jump_clones": [
+            {"jump_clone_id": 1, "location_id": 60008494, "location_type": "station", "implants": [9899]}
+        ]
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/clones/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let clones = client.character_clones(91234567).await.unwrap();
+
+    assert_eq!(clones.home_location.unwrap().location_id, 60003760);
+    assert_eq!(clones.jump_clones.len(), 1);
+}
+
+// ---------------------------------------------------------------------------
+// character_implants — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_implants() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/implants/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!([9899, 9941, 9942])))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let implants = client.character_implants(91234567).await.unwrap();
+
+    assert_eq!(implants, vec![9899, 9941, 9942]);
+}
+
+// ---------------------------------------------------------------------------
+// character_loyalty_points — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_loyalty_points() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([
+        {"corporation_id": 1000035, "loyalty_points": 50000}
+    ]);
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/loyalty/points/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let lp = client.character_loyalty_points(91234567).await.unwrap();
+
+    assert_eq!(lp.len(), 1);
+    assert_eq!(lp[0].loyalty_points, 50000);
+}
+
+// ---------------------------------------------------------------------------
+// character_planets — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_planets() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "solar_system_id": 30000142,
+        "planet_id": 40009082,
+        "planet_type": "temperate",
+        "num_pins": 5,
+        "last_update": "2026-03-15T10:00:00Z",
+        "upgrade_level": 4
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/planets/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let planets = client.character_planets(91234567).await.unwrap();
+
+    assert_eq!(planets.len(), 1);
+    assert_eq!(planets[0].planet_type, "temperate");
+}
+
+// ---------------------------------------------------------------------------
 // character_mail — simple GET
 // ---------------------------------------------------------------------------
 

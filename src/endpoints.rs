@@ -10,9 +10,11 @@ use crate::{
     EsiRegionInfo, EsiResolvedIds, EsiResolvedName, EsiSearchResult, EsiServerStatus,
     EsiSolarSystemInfo, EsiSovereigntyCampaign, EsiSovereigntyMap, EsiSovereigntyStructure,
     EsiBlueprint, EsiCharacterOrder, EsiContract, EsiContractBid, EsiContractItem,
-    EsiContact, EsiContactLabel, EsiFitting, EsiIndustryJob, EsiLocation, EsiMailBody,
-    EsiMailHeader, EsiMailLabels, EsiNewFitting, EsiNewFittingResponse, EsiNewMail,
-    EsiNotification, EsiOnlineStatus, EsiShip, EsiSkillqueueEntry, EsiSkills, EsiAttributes,
+    EsiBookmark, EsiBookmarkFolder, EsiCalendarEvent, EsiCalendarEventDetail, EsiClones,
+    EsiContact, EsiContactLabel, EsiFitting, EsiIndustryJob, EsiLocation, EsiLoyaltyPoints,
+    EsiLoyaltyStoreOffer, EsiMailBody, EsiMailHeader, EsiMailLabels, EsiNewFitting,
+    EsiNewFittingResponse, EsiNewMail, EsiNotification, EsiOnlineStatus, EsiPlanetDetail,
+    EsiPlanetSummary, EsiShip, EsiSkillqueueEntry, EsiSkills, EsiAttributes,
     EsiStargateInfo, EsiStationInfo, EsiStructureInfo, EsiTypeInfo, EsiWalletJournalEntry,
     EsiWalletTransaction, Result,
 };
@@ -489,6 +491,149 @@ impl EsiClient {
         self.get_json(&format!(
             "/characters/{}/contacts/labels/",
             character_id
+        ))
+        .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Bookmark endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch a character's bookmarks (paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn character_bookmarks(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiBookmark>> {
+        self.get_paginated_json(&format!(
+            "/characters/{}/bookmarks/",
+            character_id
+        ))
+        .await
+    }
+
+    /// Fetch a character's bookmark folders.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_bookmark_folders(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiBookmarkFolder>> {
+        self.get_json(&format!(
+            "/characters/{}/bookmarks/folders/",
+            character_id
+        ))
+        .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Calendar endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch a character's upcoming calendar events.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_calendar(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiCalendarEvent>> {
+        self.get_json(&format!(
+            "/characters/{}/calendar/",
+            character_id
+        ))
+        .await
+    }
+
+    /// Fetch details of a specific calendar event.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_calendar_event(
+        &self,
+        character_id: i64,
+        event_id: i64,
+    ) -> Result<EsiCalendarEventDetail> {
+        self.get_json(&format!(
+            "/characters/{}/calendar/{}/",
+            character_id, event_id
+        ))
+        .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Clone endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch a character's clones.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_clones(
+        &self,
+        character_id: i64,
+    ) -> Result<EsiClones> {
+        self.get_json(&format!("/characters/{}/clones/", character_id))
+            .await
+    }
+
+    /// Fetch a character's active implants.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_implants(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<i32>> {
+        self.get_json(&format!("/characters/{}/implants/", character_id))
+            .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Loyalty endpoints
+    // -----------------------------------------------------------------------
+
+    /// Fetch a character's LP balances.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_loyalty_points(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiLoyaltyPoints>> {
+        self.get_json(&format!(
+            "/characters/{}/loyalty/points/",
+            character_id
+        ))
+        .await
+    }
+
+    /// Fetch LP store offers for a corporation (public, no auth).
+    #[tracing::instrument(skip(self))]
+    pub async fn loyalty_store_offers(
+        &self,
+        corporation_id: i64,
+    ) -> Result<Vec<EsiLoyaltyStoreOffer>> {
+        self.get_json(&format!(
+            "/loyalty/stores/{}/offers/",
+            corporation_id
+        ))
+        .await
+    }
+
+    // -----------------------------------------------------------------------
+    // PI endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch a character's planetary colonies.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_planets(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiPlanetSummary>> {
+        self.get_json(&format!("/characters/{}/planets/", character_id))
+            .await
+    }
+
+    /// Fetch detailed layout of a planetary colony.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_planet_detail(
+        &self,
+        character_id: i64,
+        planet_id: i32,
+    ) -> Result<EsiPlanetDetail> {
+        self.get_json(&format!(
+            "/characters/{}/planets/{}/",
+            character_id, planet_id
         ))
         .await
     }
