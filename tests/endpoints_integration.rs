@@ -221,6 +221,116 @@ async fn test_market_prices() {
 }
 
 // ---------------------------------------------------------------------------
+// character_fittings — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_fittings() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "fitting_id": 12345,
+        "name": "PvP Rifter",
+        "description": "Standard PvP fit",
+        "ship_type_id": 587,
+        "items": [{"type_id": 2032, "flag": 11, "quantity": 1}]
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/fittings/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let fittings = client.character_fittings(91234567).await.unwrap();
+
+    assert_eq!(fittings.len(), 1);
+    assert_eq!(fittings[0].fitting_id, 12345);
+    assert_eq!(fittings[0].name, "PvP Rifter");
+}
+
+// ---------------------------------------------------------------------------
+// character_location — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_location() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "solar_system_id": 30000142,
+        "station_id": 60003760
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/location/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let loc = client.character_location(91234567).await.unwrap();
+
+    assert_eq!(loc.solar_system_id, 30000142);
+    assert_eq!(loc.station_id, Some(60003760));
+}
+
+// ---------------------------------------------------------------------------
+// character_ship — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_ship() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "ship_type_id": 587,
+        "ship_item_id": 1234567890_i64,
+        "ship_name": "My Rifter"
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/ship/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let ship = client.character_ship(91234567).await.unwrap();
+
+    assert_eq!(ship.ship_type_id, 587);
+    assert_eq!(ship.ship_name, "My Rifter");
+}
+
+// ---------------------------------------------------------------------------
+// character_online — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_character_online() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "online": true,
+        "last_login": "2026-03-20T10:00:00Z",
+        "logins": 500
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/online/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let status = client.character_online(91234567).await.unwrap();
+
+    assert!(status.online);
+    assert_eq!(status.logins, Some(500));
+}
+
+// ---------------------------------------------------------------------------
 // character_industry_jobs — simple GET
 // ---------------------------------------------------------------------------
 

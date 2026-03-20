@@ -10,7 +10,8 @@ use crate::{
     EsiRegionInfo, EsiResolvedIds, EsiResolvedName, EsiSearchResult, EsiServerStatus,
     EsiSolarSystemInfo, EsiSovereigntyCampaign, EsiSovereigntyMap, EsiSovereigntyStructure,
     EsiBlueprint, EsiCharacterOrder, EsiContract, EsiContractBid, EsiContractItem,
-    EsiIndustryJob, EsiSkillqueueEntry, EsiSkills, EsiAttributes,
+    EsiFitting, EsiIndustryJob, EsiLocation, EsiNewFitting, EsiNewFittingResponse,
+    EsiOnlineStatus, EsiShip, EsiSkillqueueEntry, EsiSkills, EsiAttributes,
     EsiStargateInfo, EsiStationInfo, EsiStructureInfo, EsiTypeInfo, EsiWalletJournalEntry,
     EsiWalletTransaction, Result,
 };
@@ -294,6 +295,85 @@ impl EsiClient {
             character_id
         ))
         .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Fitting endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch a character's saved fittings.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_fittings(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiFitting>> {
+        self.get_json(&format!("/characters/{}/fittings/", character_id))
+            .await
+    }
+
+    /// Create a new fitting for a character. Returns the new fitting ID.
+    #[tracing::instrument(skip(self, fitting))]
+    pub async fn create_fitting(
+        &self,
+        character_id: i64,
+        fitting: &EsiNewFitting,
+    ) -> Result<i64> {
+        let url = format!("{}/characters/{}/fittings/", self.base_url, character_id);
+        let resp = self.request_post(&url, fitting).await?;
+        let result: EsiNewFittingResponse = resp
+            .json()
+            .await
+            .map_err(|e| EsiError::Deserialize(e.to_string()))?;
+        Ok(result.fitting_id)
+    }
+
+    /// Delete a fitting. Returns `()` on success (204).
+    #[tracing::instrument(skip(self))]
+    pub async fn delete_fitting(
+        &self,
+        character_id: i64,
+        fitting_id: i64,
+    ) -> Result<()> {
+        let url = format!(
+            "{}/characters/{}/fittings/{}/",
+            self.base_url, character_id, fitting_id
+        );
+        let _resp = self.request_delete(&url).await?;
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------------
+    // Location endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch a character's current location.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_location(
+        &self,
+        character_id: i64,
+    ) -> Result<EsiLocation> {
+        self.get_json(&format!("/characters/{}/location/", character_id))
+            .await
+    }
+
+    /// Fetch a character's current ship.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_ship(
+        &self,
+        character_id: i64,
+    ) -> Result<EsiShip> {
+        self.get_json(&format!("/characters/{}/ship/", character_id))
+            .await
+    }
+
+    /// Fetch a character's online status.
+    #[tracing::instrument(skip(self))]
+    pub async fn character_online(
+        &self,
+        character_id: i64,
+    ) -> Result<EsiOnlineStatus> {
+        self.get_json(&format!("/characters/{}/online/", character_id))
+            .await
     }
 
     // -----------------------------------------------------------------------

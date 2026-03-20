@@ -804,6 +804,78 @@ pub struct EsiCharacterOrder {
 }
 
 // ---------------------------------------------------------------------------
+// Fitting types (Phase 2)
+// ---------------------------------------------------------------------------
+
+/// A saved ship fitting.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiFitting {
+    pub fitting_id: i64,
+    pub name: String,
+    pub description: String,
+    pub ship_type_id: i32,
+    #[serde(default)]
+    pub items: Vec<EsiFittingItem>,
+}
+
+/// An item in a fitting (used for both GET and POST).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EsiFittingItem {
+    pub type_id: i32,
+    pub flag: i32,
+    pub quantity: i32,
+}
+
+/// Body for creating a new fitting.
+#[derive(Debug, Clone, Serialize)]
+pub struct EsiNewFitting {
+    pub name: String,
+    pub description: String,
+    pub ship_type_id: i32,
+    pub items: Vec<EsiFittingItem>,
+}
+
+/// Response from creating a fitting.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiNewFittingResponse {
+    pub fitting_id: i64,
+}
+
+// ---------------------------------------------------------------------------
+// Location types (Phase 2)
+// ---------------------------------------------------------------------------
+
+/// A character's current location.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiLocation {
+    pub solar_system_id: i32,
+    #[serde(default)]
+    pub station_id: Option<i64>,
+    #[serde(default)]
+    pub structure_id: Option<i64>,
+}
+
+/// A character's current ship.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiShip {
+    pub ship_type_id: i32,
+    pub ship_item_id: i64,
+    pub ship_name: String,
+}
+
+/// A character's online status.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiOnlineStatus {
+    pub online: bool,
+    #[serde(default)]
+    pub last_login: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub last_logout: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub logins: Option<i32>,
+}
+
+// ---------------------------------------------------------------------------
 // ETag cache
 // ---------------------------------------------------------------------------
 
@@ -1818,6 +1890,61 @@ mod tests {
     // -----------------------------------------------------------------------
     // Phase 2 deserialization tests — Industry, Contracts, Orders
     // -----------------------------------------------------------------------
+
+    // -----------------------------------------------------------------------
+    // Phase 2 deserialization tests — Fittings, Location
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_deserialize_fitting() {
+        let json = r#"{
+            "fitting_id": 12345,
+            "name": "PvP Rifter",
+            "description": "Standard PvP fit",
+            "ship_type_id": 587,
+            "items": [
+                {"type_id": 2032, "flag": 11, "quantity": 1},
+                {"type_id": 3170, "flag": 12, "quantity": 1}
+            ]
+        }"#;
+        let fit: EsiFitting = serde_json::from_str(json).unwrap();
+        assert_eq!(fit.fitting_id, 12345);
+        assert_eq!(fit.name, "PvP Rifter");
+        assert_eq!(fit.ship_type_id, 587);
+        assert_eq!(fit.items.len(), 2);
+        assert_eq!(fit.items[0].type_id, 2032);
+    }
+
+    #[test]
+    fn test_deserialize_location() {
+        let json = r#"{"solar_system_id": 30000142, "station_id": 60003760}"#;
+        let loc: EsiLocation = serde_json::from_str(json).unwrap();
+        assert_eq!(loc.solar_system_id, 30000142);
+        assert_eq!(loc.station_id, Some(60003760));
+        assert_eq!(loc.structure_id, None);
+    }
+
+    #[test]
+    fn test_deserialize_ship() {
+        let json = r#"{"ship_type_id": 587, "ship_item_id": 1234567890, "ship_name": "My Rifter"}"#;
+        let ship: EsiShip = serde_json::from_str(json).unwrap();
+        assert_eq!(ship.ship_type_id, 587);
+        assert_eq!(ship.ship_name, "My Rifter");
+    }
+
+    #[test]
+    fn test_deserialize_online_status() {
+        let json = r#"{
+            "online": true,
+            "last_login": "2026-03-20T10:00:00Z",
+            "last_logout": "2026-03-19T22:00:00Z",
+            "logins": 500
+        }"#;
+        let status: EsiOnlineStatus = serde_json::from_str(json).unwrap();
+        assert!(status.online);
+        assert!(status.last_login.is_some());
+        assert_eq!(status.logins, Some(500));
+    }
 
     #[test]
     fn test_deserialize_industry_job() {
