@@ -28,10 +28,8 @@ async fn test_get_type_via_request() {
         .mount(&server)
         .await;
 
-    let client = EsiClient::new();
-    let url = format!("{}/universe/types/587/", server.uri());
-    let resp = client.request(&url).await.unwrap();
-    let info: nea_esi::EsiTypeInfo = resp.json().await.unwrap();
+    let client = EsiClient::new().with_base_url(server.uri());
+    let info = client.get_type(587).await.unwrap();
 
     assert_eq!(info.type_id, 587);
     assert_eq!(info.name, "Rifter");
@@ -70,9 +68,8 @@ async fn test_paginated_type_ids() {
         .mount(&server)
         .await;
 
-    let client = EsiClient::new();
-    let url = format!("{}/universe/types/", server.uri());
-    let ids = client.get_paginated::<i32>(&url).await.unwrap();
+    let client = EsiClient::new().with_base_url(server.uri());
+    let ids = client.list_type_ids().await.unwrap();
 
     assert_eq!(ids.len(), 5);
     assert_eq!(ids, vec![1, 2, 3, 4, 5]);
@@ -99,11 +96,9 @@ async fn test_resolve_ids_via_post() {
         .mount(&server)
         .await;
 
-    let client = EsiClient::new();
-    let url = format!("{}/universe/ids/", server.uri());
+    let client = EsiClient::new().with_base_url(server.uri());
     let names = vec!["Jita".to_string(), "CCP Bartender".to_string()];
-    let resp = client.request_post(&url, &names).await.unwrap();
-    let resolved: nea_esi::EsiResolvedIds = resp.json().await.unwrap();
+    let resolved = client.resolve_ids(&names).await.unwrap();
 
     assert_eq!(resolved.systems.len(), 1);
     assert_eq!(resolved.systems[0].name, "Jita");
@@ -132,21 +127,8 @@ async fn test_search_url_encoding() {
         .mount(&server)
         .await;
 
-    // Build the URL the same way the search method does
-    let base = format!("{}/search/", server.uri());
-    let url = url::Url::parse_with_params(
-        &base,
-        &[
-            ("search", "Jita"),
-            ("categories", "solar_system"),
-            ("strict", "true"),
-        ],
-    )
-    .unwrap();
-
-    let client = EsiClient::new();
-    let resp = client.request(url.as_str()).await.unwrap();
-    let result: nea_esi::EsiSearchResult = resp.json().await.unwrap();
+    let client = EsiClient::new().with_base_url(server.uri());
+    let result = client.search("Jita", "solar_system", true).await.unwrap();
 
     assert_eq!(result.solar_system, vec![30000142]);
 }
@@ -171,11 +153,92 @@ async fn test_server_status() {
         .mount(&server)
         .await;
 
-    let client = EsiClient::new();
-    let url = format!("{}/status/", server.uri());
-    let resp = client.request(&url).await.unwrap();
-    let status: nea_esi::EsiServerStatus = resp.json().await.unwrap();
+    let client = EsiClient::new().with_base_url(server.uri());
+    let status = client.server_status().await.unwrap();
 
     assert_eq!(status.players, 23456);
     assert_eq!(status.server_version, Some("2345678".to_string()));
+}
+
+// ---------------------------------------------------------------------------
+// market_history — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_market_history() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "date": "2026-03-01",
+        "average": 5.25,
+        "highest": 5.27,
+        "lowest": 5.11,
+        "volume": 72016862,
+        "order_count": 2267
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/markets/10000002/history/"))
+        .and(query_param("type_id", "34"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let entries = client.market_history(10000002, 34).await.unwrap();
+
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].date, "2026-03-01");
+    assert_eq!(entries[0].volume, 72016862);
+}
+
+// ---------------------------------------------------------------------------
+// market_prices — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_market_prices() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([
+        {"type_id": 34, "average_price": 5.25, "adjusted_price": 5.10}
+    ]);
+
+    Mock::given(method("GET"))
+        .and(path("/markets/prices/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let prices = client.market_prices().await.unwrap();
+
+    assert_eq!(prices.len(), 1);
+    assert_eq!(prices[0].type_id, 34);
+}
+
+// ---------------------------------------------------------------------------
+// get_character — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_get_character() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "name": "Test Pilot",
+        "corporation_id": 98000001
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let info = client.get_character(91234567).await.unwrap();
+
+    assert_eq!(info.name, "Test Pilot");
+    assert_eq!(info.corporation_id, Some(98000001));
 }

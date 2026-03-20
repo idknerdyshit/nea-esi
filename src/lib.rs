@@ -602,6 +602,7 @@ pub struct EsiClient {
     pub(crate) tokens: Arc<tokio::sync::RwLock<Option<EsiTokens>>>,
     pub(crate) app_credentials: Option<EsiAppCredentials>,
     cache: Option<Arc<RwLock<HashMap<String, CachedResponse>>>>,
+    base_url: String,
 }
 
 impl EsiClient {
@@ -639,6 +640,7 @@ impl EsiClient {
             tokens: Arc::new(tokio::sync::RwLock::new(None)),
             app_credentials: None,
             cache: None,
+            base_url: BASE_URL.to_string(),
         }
     }
 
@@ -664,6 +666,12 @@ impl EsiClient {
     /// Set app credentials (builder pattern).
     pub fn credentials(mut self, creds: EsiAppCredentials) -> Self {
         self.app_credentials = Some(creds);
+        self
+    }
+
+    /// Override the base URL (builder pattern). Useful for testing with mock servers.
+    pub fn with_base_url(mut self, url: impl Into<String>) -> Self {
+        self.base_url = url.into();
         self
     }
 
@@ -741,6 +749,7 @@ impl EsiClient {
             tokens: Arc::clone(&self.tokens),
             app_credentials: self.app_credentials.clone(),
             cache: self.cache.as_ref().map(Arc::clone),
+            base_url: self.base_url.clone(),
         }
     }
 

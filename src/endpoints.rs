@@ -8,7 +8,7 @@ use crate::{
     EsiKillmailRef, EsiMarketGroupInfo, EsiMarketHistoryEntry, EsiMarketOrder, EsiMarketPrice,
     EsiRegionInfo, EsiResolvedIds, EsiResolvedName, EsiSearchResult, EsiServerStatus,
     EsiSolarSystemInfo, EsiSovereigntyCampaign, EsiSovereigntyMap, EsiSovereigntyStructure,
-    EsiStargateInfo, EsiStationInfo, EsiStructureInfo, EsiTypeInfo, Result, BASE_URL,
+    EsiStargateInfo, EsiStationInfo, EsiStructureInfo, EsiTypeInfo, Result,
 };
 
 const RESOLVE_NAMES_CHUNK_SIZE: usize = 1000;
@@ -28,7 +28,7 @@ impl EsiClient {
     ) -> Result<Vec<EsiMarketHistoryEntry>> {
         let url = format!(
             "{}/markets/{}/history/?type_id={}",
-            BASE_URL, region_id, type_id
+            self.base_url, region_id, type_id
         );
         let resp = self.request(&url).await?;
         let entries: Vec<EsiMarketHistoryEntry> = resp
@@ -48,7 +48,7 @@ impl EsiClient {
     ) -> Result<Vec<EsiMarketOrder>> {
         let url = format!(
             "{}/markets/{}/orders/?type_id={}&order_type=all",
-            BASE_URL, region_id, type_id
+            self.base_url, region_id, type_id
         );
         let orders = self.get_paginated::<EsiMarketOrder>(&url).await?;
         debug!(total_orders = orders.len(), "market_orders complete");
@@ -68,7 +68,7 @@ impl EsiClient {
     ) -> Result<serde_json::Value> {
         let url = format!(
             "{}/killmails/{}/{}/",
-            BASE_URL, killmail_id, killmail_hash
+            self.base_url, killmail_id, killmail_hash
         );
         let resp = self.request(&url).await?;
         let value: serde_json::Value = resp
@@ -88,7 +88,7 @@ impl EsiClient {
     ) -> Result<EsiKillmail> {
         let url = format!(
             "{}/killmails/{}/{}/",
-            BASE_URL, killmail_id, killmail_hash
+            self.base_url, killmail_id, killmail_hash
         );
         let resp = self.request(&url).await?;
         let km: EsiKillmail = resp
@@ -106,7 +106,7 @@ impl EsiClient {
     /// Fetch character info from ESI.
     #[tracing::instrument(skip(self))]
     pub async fn get_character(&self, character_id: i64) -> Result<EsiCharacterInfo> {
-        let url = format!("{}/characters/{}/", BASE_URL, character_id);
+        let url = format!("{}/characters/{}/", self.base_url, character_id);
         let resp = self.request(&url).await?;
         let info: EsiCharacterInfo = resp
             .json()
@@ -123,7 +123,7 @@ impl EsiClient {
     /// Fetch corporation info from ESI.
     #[tracing::instrument(skip(self))]
     pub async fn get_corporation(&self, corporation_id: i64) -> Result<EsiCorporationInfo> {
-        let url = format!("{}/corporations/{}/", BASE_URL, corporation_id);
+        let url = format!("{}/corporations/{}/", self.base_url, corporation_id);
         let resp = self.request(&url).await?;
         let info: EsiCorporationInfo = resp
             .json()
@@ -140,7 +140,7 @@ impl EsiClient {
     /// Fetch alliance info from ESI.
     #[tracing::instrument(skip(self))]
     pub async fn get_alliance(&self, alliance_id: i64) -> Result<EsiAllianceInfo> {
-        let url = format!("{}/alliances/{}/", BASE_URL, alliance_id);
+        let url = format!("{}/alliances/{}/", self.base_url, alliance_id);
         let resp = self.request(&url).await?;
         let info: EsiAllianceInfo = resp
             .json()
@@ -157,7 +157,7 @@ impl EsiClient {
     /// Fetch all assets for a character, handling pagination.
     #[tracing::instrument(skip(self))]
     pub async fn character_assets(&self, character_id: i64) -> Result<Vec<EsiAssetItem>> {
-        let url = format!("{}/characters/{}/assets/", BASE_URL, character_id);
+        let url = format!("{}/characters/{}/assets/", self.base_url, character_id);
         let items = self.get_paginated::<EsiAssetItem>(&url).await?;
         debug!(total_items = items.len(), "character_assets complete");
         Ok(items)
@@ -176,7 +176,7 @@ impl EsiClient {
             return Ok(Vec::new());
         }
 
-        let url = format!("{}/universe/names/", BASE_URL);
+        let url = format!("{}/universe/names/", self.base_url);
         let mut all_names = Vec::with_capacity(ids.len());
 
         for chunk in ids.chunks(RESOLVE_NAMES_CHUNK_SIZE) {
@@ -199,7 +199,7 @@ impl EsiClient {
     /// Fetch info about a player-owned structure.
     #[tracing::instrument(skip(self))]
     pub async fn get_structure(&self, structure_id: i64) -> Result<EsiStructureInfo> {
-        let url = format!("{}/universe/structures/{}/", BASE_URL, structure_id);
+        let url = format!("{}/universe/structures/{}/", self.base_url, structure_id);
         let resp = self.request(&url).await?;
         let info: EsiStructureInfo = resp
             .json()
@@ -216,7 +216,7 @@ impl EsiClient {
     /// Fetch global average and adjusted prices for all types.
     #[tracing::instrument(skip(self))]
     pub async fn market_prices(&self) -> Result<Vec<EsiMarketPrice>> {
-        let url = format!("{}/markets/prices/", BASE_URL);
+        let url = format!("{}/markets/prices/", self.base_url);
         let resp = self.request(&url).await?;
         let prices: Vec<EsiMarketPrice> = resp
             .json()
@@ -237,7 +237,7 @@ impl EsiClient {
     /// Fetch detailed information about an inventory type.
     #[tracing::instrument(skip(self))]
     pub async fn get_type(&self, type_id: i32) -> Result<EsiTypeInfo> {
-        let url = format!("{}/universe/types/{}/", BASE_URL, type_id);
+        let url = format!("{}/universe/types/{}/", self.base_url, type_id);
         let resp = self.request(&url).await?;
         let info: EsiTypeInfo = resp
             .json()
@@ -250,7 +250,7 @@ impl EsiClient {
     /// List all type IDs (paginated).
     #[tracing::instrument(skip(self))]
     pub async fn list_type_ids(&self) -> Result<Vec<i32>> {
-        let url = format!("{}/universe/types/", BASE_URL);
+        let url = format!("{}/universe/types/", self.base_url);
         let ids = self.get_paginated::<i32>(&url).await?;
         debug!(count = ids.len(), "list_type_ids complete");
         Ok(ids)
@@ -259,7 +259,7 @@ impl EsiClient {
     /// Fetch inventory group info.
     #[tracing::instrument(skip(self))]
     pub async fn get_group(&self, group_id: i32) -> Result<EsiGroupInfo> {
-        let url = format!("{}/universe/groups/{}/", BASE_URL, group_id);
+        let url = format!("{}/universe/groups/{}/", self.base_url, group_id);
         let resp = self.request(&url).await?;
         let info: EsiGroupInfo = resp
             .json()
@@ -272,7 +272,7 @@ impl EsiClient {
     /// Fetch inventory category info.
     #[tracing::instrument(skip(self))]
     pub async fn get_category(&self, category_id: i32) -> Result<EsiCategoryInfo> {
-        let url = format!("{}/universe/categories/{}/", BASE_URL, category_id);
+        let url = format!("{}/universe/categories/{}/", self.base_url, category_id);
         let resp = self.request(&url).await?;
         let info: EsiCategoryInfo = resp
             .json()
@@ -285,7 +285,7 @@ impl EsiClient {
     /// Fetch solar system info.
     #[tracing::instrument(skip(self))]
     pub async fn get_system(&self, system_id: i32) -> Result<EsiSolarSystemInfo> {
-        let url = format!("{}/universe/systems/{}/", BASE_URL, system_id);
+        let url = format!("{}/universe/systems/{}/", self.base_url, system_id);
         let resp = self.request(&url).await?;
         let info: EsiSolarSystemInfo = resp
             .json()
@@ -300,7 +300,7 @@ impl EsiClient {
     pub async fn get_constellation(&self, constellation_id: i32) -> Result<EsiConstellationInfo> {
         let url = format!(
             "{}/universe/constellations/{}/",
-            BASE_URL, constellation_id
+            self.base_url, constellation_id
         );
         let resp = self.request(&url).await?;
         let info: EsiConstellationInfo = resp
@@ -314,7 +314,7 @@ impl EsiClient {
     /// Fetch region info.
     #[tracing::instrument(skip(self))]
     pub async fn get_region(&self, region_id: i32) -> Result<EsiRegionInfo> {
-        let url = format!("{}/universe/regions/{}/", BASE_URL, region_id);
+        let url = format!("{}/universe/regions/{}/", self.base_url, region_id);
         let resp = self.request(&url).await?;
         let info: EsiRegionInfo = resp
             .json()
@@ -327,7 +327,7 @@ impl EsiClient {
     /// Fetch NPC station info.
     #[tracing::instrument(skip(self))]
     pub async fn get_station(&self, station_id: i32) -> Result<EsiStationInfo> {
-        let url = format!("{}/universe/stations/{}/", BASE_URL, station_id);
+        let url = format!("{}/universe/stations/{}/", self.base_url, station_id);
         let resp = self.request(&url).await?;
         let info: EsiStationInfo = resp
             .json()
@@ -340,7 +340,7 @@ impl EsiClient {
     /// Fetch stargate info.
     #[tracing::instrument(skip(self))]
     pub async fn get_stargate(&self, stargate_id: i32) -> Result<EsiStargateInfo> {
-        let url = format!("{}/universe/stargates/{}/", BASE_URL, stargate_id);
+        let url = format!("{}/universe/stargates/{}/", self.base_url, stargate_id);
         let resp = self.request(&url).await?;
         let info: EsiStargateInfo = resp
             .json()
@@ -359,7 +359,7 @@ impl EsiClient {
             return Ok(EsiResolvedIds::default());
         }
 
-        let url = format!("{}/universe/ids/", BASE_URL);
+        let url = format!("{}/universe/ids/", self.base_url);
         let mut merged = EsiResolvedIds::default();
 
         for chunk in names.chunks(RESOLVE_IDS_CHUNK_SIZE) {
@@ -382,7 +382,7 @@ impl EsiClient {
     /// List all type IDs with active market orders in a region (paginated).
     #[tracing::instrument(skip(self))]
     pub async fn market_type_ids(&self, region_id: i32) -> Result<Vec<i32>> {
-        let url = format!("{}/markets/{}/types/", BASE_URL, region_id);
+        let url = format!("{}/markets/{}/types/", self.base_url, region_id);
         let ids = self.get_paginated::<i32>(&url).await?;
         debug!(count = ids.len(), "market_type_ids complete");
         Ok(ids)
@@ -391,7 +391,7 @@ impl EsiClient {
     /// List all market group IDs.
     #[tracing::instrument(skip(self))]
     pub async fn market_group_ids(&self) -> Result<Vec<i32>> {
-        let url = format!("{}/markets/groups/", BASE_URL);
+        let url = format!("{}/markets/groups/", self.base_url);
         let resp = self.request(&url).await?;
         let ids: Vec<i32> = resp
             .json()
@@ -404,7 +404,7 @@ impl EsiClient {
     /// Fetch market group info.
     #[tracing::instrument(skip(self))]
     pub async fn get_market_group(&self, market_group_id: i32) -> Result<EsiMarketGroupInfo> {
-        let url = format!("{}/markets/groups/{}/", BASE_URL, market_group_id);
+        let url = format!("{}/markets/groups/{}/", self.base_url, market_group_id);
         let resp = self.request(&url).await?;
         let info: EsiMarketGroupInfo = resp
             .json()
@@ -429,7 +429,7 @@ impl EsiClient {
         categories: &str,
         strict: bool,
     ) -> Result<EsiSearchResult> {
-        let base = format!("{}/search/", BASE_URL);
+        let base = format!("{}/search/", self.base_url);
         let strict_str = strict.to_string();
         let url = url::Url::parse_with_params(
             &base,
@@ -462,7 +462,7 @@ impl EsiClient {
     ) -> Result<Vec<EsiKillmailRef>> {
         let url = format!(
             "{}/characters/{}/killmails/recent/",
-            BASE_URL, character_id
+            self.base_url, character_id
         );
         let refs = self.get_paginated::<EsiKillmailRef>(&url).await?;
         debug!(count = refs.len(), "character_killmails complete");
@@ -477,7 +477,7 @@ impl EsiClient {
     ) -> Result<Vec<EsiKillmailRef>> {
         let url = format!(
             "{}/corporations/{}/killmails/recent/",
-            BASE_URL, corporation_id
+            self.base_url, corporation_id
         );
         let refs = self.get_paginated::<EsiKillmailRef>(&url).await?;
         debug!(count = refs.len(), "corporation_killmails complete");
@@ -491,7 +491,7 @@ impl EsiClient {
     /// Fetch the sovereignty map — who owns each system.
     #[tracing::instrument(skip(self))]
     pub async fn sovereignty_map(&self) -> Result<Vec<EsiSovereigntyMap>> {
-        let url = format!("{}/sovereignty/map/", BASE_URL);
+        let url = format!("{}/sovereignty/map/", self.base_url);
         let resp = self.request(&url).await?;
         let entries: Vec<EsiSovereigntyMap> = resp
             .json()
@@ -504,7 +504,7 @@ impl EsiClient {
     /// Fetch active sovereignty campaigns.
     #[tracing::instrument(skip(self))]
     pub async fn sovereignty_campaigns(&self) -> Result<Vec<EsiSovereigntyCampaign>> {
-        let url = format!("{}/sovereignty/campaigns/", BASE_URL);
+        let url = format!("{}/sovereignty/campaigns/", self.base_url);
         let resp = self.request(&url).await?;
         let entries: Vec<EsiSovereigntyCampaign> = resp
             .json()
@@ -517,7 +517,7 @@ impl EsiClient {
     /// Fetch sovereignty structures.
     #[tracing::instrument(skip(self))]
     pub async fn sovereignty_structures(&self) -> Result<Vec<EsiSovereigntyStructure>> {
-        let url = format!("{}/sovereignty/structures/", BASE_URL);
+        let url = format!("{}/sovereignty/structures/", self.base_url);
         let resp = self.request(&url).await?;
         let entries: Vec<EsiSovereigntyStructure> = resp
             .json()
@@ -534,7 +534,7 @@ impl EsiClient {
     /// Fetch active incursions.
     #[tracing::instrument(skip(self))]
     pub async fn incursions(&self) -> Result<Vec<EsiIncursion>> {
-        let url = format!("{}/incursions/", BASE_URL);
+        let url = format!("{}/incursions/", self.base_url);
         let resp = self.request(&url).await?;
         let entries: Vec<EsiIncursion> = resp
             .json()
@@ -551,7 +551,7 @@ impl EsiClient {
     /// Fetch server status (player count, server version).
     #[tracing::instrument(skip(self))]
     pub async fn server_status(&self) -> Result<EsiServerStatus> {
-        let url = format!("{}/status/", BASE_URL);
+        let url = format!("{}/status/", self.base_url);
         let resp = self.request(&url).await?;
         let status: EsiServerStatus = resp
             .json()
