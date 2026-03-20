@@ -553,6 +553,53 @@ pub struct EsiServerStatus {
 }
 
 // ---------------------------------------------------------------------------
+// Wallet types (Phase 2)
+// ---------------------------------------------------------------------------
+
+/// A single wallet journal entry.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiWalletJournalEntry {
+    pub id: i64,
+    pub date: DateTime<Utc>,
+    pub ref_type: String,
+    #[serde(default)]
+    pub amount: Option<f64>,
+    #[serde(default)]
+    pub balance: Option<f64>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub first_party_id: Option<i64>,
+    #[serde(default)]
+    pub second_party_id: Option<i64>,
+    #[serde(default)]
+    pub reason: Option<String>,
+    #[serde(default)]
+    pub context_id: Option<i64>,
+    #[serde(default)]
+    pub context_id_type: Option<String>,
+    #[serde(default)]
+    pub tax: Option<f64>,
+    #[serde(default)]
+    pub tax_receiver_id: Option<i64>,
+}
+
+/// A single wallet transaction.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiWalletTransaction {
+    pub transaction_id: i64,
+    pub date: DateTime<Utc>,
+    pub type_id: i32,
+    pub location_id: i64,
+    pub unit_price: f64,
+    pub quantity: i32,
+    pub client_id: i64,
+    pub is_buy: bool,
+    pub is_personal: bool,
+    pub journal_ref_id: i64,
+}
+
+// ---------------------------------------------------------------------------
 // ETag cache
 // ---------------------------------------------------------------------------
 
@@ -1002,6 +1049,12 @@ impl EsiClient {
         let body_value = serde_json::to_value(body)
             .map_err(|e| EsiError::Internal(format!("failed to serialize body: {}", e)))?;
         self.execute_request(url, move |client, url| client.post(url).json(&body_value))
+            .await
+    }
+
+    /// Make a rate-limited DELETE request.
+    pub async fn request_delete(&self, url: &str) -> Result<reqwest::Response> {
+        self.execute_request(url, |client, url| client.delete(url))
             .await
     }
 }
@@ -1552,5 +1605,76 @@ mod tests {
         assert_eq!(status.players, 100);
         assert_eq!(status.server_version, None);
         assert_eq!(status.vip, None);
+    }
+
+    // -----------------------------------------------------------------------
+    // Phase 2 deserialization tests — Wallet
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_deserialize_wallet_journal_entry_full() {
+        let json = r#"{
+            "id": 123456789,
+            "date": "2026-03-15T10:30:00Z",
+            "ref_type": "market_transaction",
+            "amount": -1500000.50,
+            "balance": 98500000.00,
+            "description": "Market: Tritanium",
+            "first_party_id": 91234567,
+            "second_party_id": 92345678,
+            "reason": "For the lulz",
+            "context_id": 6789012345,
+            "context_id_type": "market_transaction_id",
+            "tax": 15000.00,
+            "tax_receiver_id": 1000035
+        }"#;
+        let entry: EsiWalletJournalEntry = serde_json::from_str(json).unwrap();
+        assert_eq!(entry.id, 123456789);
+        assert_eq!(entry.ref_type, "market_transaction");
+        assert!((entry.amount.unwrap() - (-1500000.50)).abs() < f64::EPSILON);
+        assert!((entry.balance.unwrap() - 98500000.00).abs() < f64::EPSILON);
+        assert_eq!(entry.description, Some("Market: Tritanium".to_string()));
+        assert_eq!(entry.first_party_id, Some(91234567));
+        assert_eq!(entry.second_party_id, Some(92345678));
+        assert_eq!(entry.context_id_type, Some("market_transaction_id".to_string()));
+        assert_eq!(entry.tax_receiver_id, Some(1000035));
+    }
+
+    #[test]
+    fn test_deserialize_wallet_journal_entry_minimal() {
+        let json = r#"{
+            "id": 999,
+            "date": "2026-01-01T00:00:00Z",
+            "ref_type": "player_donation"
+        }"#;
+        let entry: EsiWalletJournalEntry = serde_json::from_str(json).unwrap();
+        assert_eq!(entry.id, 999);
+        assert_eq!(entry.ref_type, "player_donation");
+        assert_eq!(entry.amount, None);
+        assert_eq!(entry.description, None);
+    }
+
+    #[test]
+    fn test_deserialize_wallet_transaction() {
+        let json = r#"{
+            "transaction_id": 5678901234,
+            "date": "2026-03-15T10:30:00Z",
+            "type_id": 34,
+            "location_id": 60003760,
+            "unit_price": 5.25,
+            "quantity": 100000,
+            "client_id": 91234567,
+            "is_buy": true,
+            "is_personal": true,
+            "journal_ref_id": 123456789
+        }"#;
+        let tx: EsiWalletTransaction = serde_json::from_str(json).unwrap();
+        assert_eq!(tx.transaction_id, 5678901234);
+        assert_eq!(tx.type_id, 34);
+        assert_eq!(tx.location_id, JITA_STATION);
+        assert!((tx.unit_price - 5.25).abs() < f64::EPSILON);
+        assert_eq!(tx.quantity, 100000);
+        assert!(tx.is_buy);
+        assert!(tx.is_personal);
     }
 }

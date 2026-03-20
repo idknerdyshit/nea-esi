@@ -9,7 +9,8 @@ use crate::{
     EsiKillmailRef, EsiMarketGroupInfo, EsiMarketHistoryEntry, EsiMarketOrder, EsiMarketPrice,
     EsiRegionInfo, EsiResolvedIds, EsiResolvedName, EsiSearchResult, EsiServerStatus,
     EsiSolarSystemInfo, EsiSovereigntyCampaign, EsiSovereigntyMap, EsiSovereigntyStructure,
-    EsiStargateInfo, EsiStationInfo, EsiStructureInfo, EsiTypeInfo, Result,
+    EsiStargateInfo, EsiStationInfo, EsiStructureInfo, EsiTypeInfo, EsiWalletJournalEntry,
+    EsiWalletTransaction, Result,
 };
 
 const RESOLVE_NAMES_CHUNK_SIZE: usize = 1000;
@@ -124,6 +125,43 @@ impl EsiClient {
     pub async fn character_assets(&self, character_id: i64) -> Result<Vec<EsiAssetItem>> {
         self.get_paginated_json(&format!("/characters/{}/assets/", character_id))
             .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Wallet endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch a character's ISK balance.
+    #[tracing::instrument(skip(self))]
+    pub async fn wallet_balance(&self, character_id: i64) -> Result<f64> {
+        self.get_json(&format!("/characters/{}/wallet/", character_id))
+            .await
+    }
+
+    /// Fetch a character's wallet journal (paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn wallet_journal(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiWalletJournalEntry>> {
+        self.get_paginated_json(&format!(
+            "/characters/{}/wallet/journal/",
+            character_id
+        ))
+        .await
+    }
+
+    /// Fetch a character's wallet transactions.
+    #[tracing::instrument(skip(self))]
+    pub async fn wallet_transactions(
+        &self,
+        character_id: i64,
+    ) -> Result<Vec<EsiWalletTransaction>> {
+        self.get_json(&format!(
+            "/characters/{}/wallet/transactions/",
+            character_id
+        ))
+        .await
     }
 
     // -----------------------------------------------------------------------

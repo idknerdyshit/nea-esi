@@ -221,6 +221,96 @@ async fn test_market_prices() {
 }
 
 // ---------------------------------------------------------------------------
+// wallet_balance — simple GET returning bare f64
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_wallet_balance() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/wallet/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!(123456789.50)))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let balance = client.wallet_balance(91234567).await.unwrap();
+
+    assert!((balance - 123456789.50).abs() < f64::EPSILON);
+}
+
+// ---------------------------------------------------------------------------
+// wallet_journal — paginated GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_wallet_journal() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "id": 123456789,
+        "date": "2026-03-15T10:30:00Z",
+        "ref_type": "market_transaction",
+        "amount": -1500000.50
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/wallet/journal/"))
+        .and(query_param("page", "1"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(&body)
+                .insert_header("x-pages", "1"),
+        )
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let entries = client.wallet_journal(91234567).await.unwrap();
+
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].id, 123456789);
+    assert_eq!(entries[0].ref_type, "market_transaction");
+}
+
+// ---------------------------------------------------------------------------
+// wallet_transactions — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_wallet_transactions() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "transaction_id": 5678901234_i64,
+        "date": "2026-03-15T10:30:00Z",
+        "type_id": 34,
+        "location_id": 60003760,
+        "unit_price": 5.25,
+        "quantity": 100000,
+        "client_id": 91234567,
+        "is_buy": true,
+        "is_personal": true,
+        "journal_ref_id": 123456789
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/characters/91234567/wallet/transactions/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let txns = client.wallet_transactions(91234567).await.unwrap();
+
+    assert_eq!(txns.len(), 1);
+    assert_eq!(txns[0].transaction_id, 5678901234);
+    assert_eq!(txns[0].type_id, 34);
+    assert!(txns[0].is_buy);
+}
+
+// ---------------------------------------------------------------------------
 // get_character — simple GET
 // ---------------------------------------------------------------------------
 
