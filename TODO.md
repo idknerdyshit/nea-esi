@@ -132,36 +132,36 @@ Personal character data — all require SSO tokens.
 Corporation-level data — requires director/CEO roles.
 
 ### Corp Wallet
-- [ ] `GET /corporations/{corporation_id}/wallets/` — division balances
-- [ ] `GET /corporations/{corporation_id}/wallets/{division}/journal/` — division journal
-- [ ] `GET /corporations/{corporation_id}/wallets/{division}/transactions/` — division transactions
+- [x] `GET /corporations/{corporation_id}/wallets/` — division balances
+- [x] `GET /corporations/{corporation_id}/wallets/{division}/journal/` — division journal
+- [x] `GET /corporations/{corporation_id}/wallets/{division}/transactions/` — division transactions
 
 ### Corp Assets
-- [ ] `GET /corporations/{corporation_id}/assets/` — corp assets (paginated)
-- [ ] `POST /corporations/{corporation_id}/assets/names/` — name asset items
-- [ ] `POST /corporations/{corporation_id}/assets/locations/` — asset locations
+- [x] `GET /corporations/{corporation_id}/assets/` — corp assets (paginated)
+- [x] `POST /corporations/{corporation_id}/assets/names/` — name asset items
+- [x] `POST /corporations/{corporation_id}/assets/locations/` — asset locations
 
 ### Corp Industry
-- [ ] `GET /corporations/{corporation_id}/industry/jobs/` — corp industry jobs
-- [ ] `GET /corporations/{corporation_id}/blueprints/` — corp blueprints
+- [x] `GET /corporations/{corporation_id}/industry/jobs/` — corp industry jobs
+- [x] `GET /corporations/{corporation_id}/blueprints/` — corp blueprints
 
 ### Corp Contracts
-- [ ] `GET /corporations/{corporation_id}/contracts/` — corp contracts
+- [x] `GET /corporations/{corporation_id}/contracts/` — corp contracts
 
 ### Corp Orders
-- [ ] `GET /corporations/{corporation_id}/orders/` — corp market orders
-- [ ] `GET /corporations/{corporation_id}/orders/history/` — corp order history
+- [x] `GET /corporations/{corporation_id}/orders/` — corp market orders
+- [x] `GET /corporations/{corporation_id}/orders/history/` — corp order history
 
 ### Corp Members
-- [ ] `GET /corporations/{corporation_id}/members/` — member list
-- [ ] `GET /corporations/{corporation_id}/members/titles/` — member titles
-- [ ] `GET /corporations/{corporation_id}/roles/` — member roles
-- [ ] `GET /corporations/{corporation_id}/membertracking/` — member tracking
+- [x] `GET /corporations/{corporation_id}/members/` — member list
+- [x] `GET /corporations/{corporation_id}/members/titles/` — member titles
+- [x] `GET /corporations/{corporation_id}/roles/` — member roles
+- [x] `GET /corporations/{corporation_id}/membertracking/` — member tracking
 
 ### Corp Structures
-- [ ] `GET /corporations/{corporation_id}/structures/` — owned structures
-- [ ] `GET /corporations/{corporation_id}/starbases/` — POSes
-- [ ] `GET /corporations/{corporation_id}/starbases/{starbase_id}/` — POS config
+- [x] `GET /corporations/{corporation_id}/structures/` — owned structures
+- [x] `GET /corporations/{corporation_id}/starbases/` — POSes
+- [x] `GET /corporations/{corporation_id}/starbases/{starbase_id}/` — POS config
 
 ---
 

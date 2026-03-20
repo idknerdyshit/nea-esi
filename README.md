@@ -267,6 +267,59 @@ client.character_planets(character_id: i64) -> Vec<EsiPlanetSummary>
 client.character_planet_detail(character_id: i64, planet_id: i32) -> EsiPlanetDetail
 ```
 
+**Corporation — Wallet:**
+
+```rust
+client.corp_wallet_balances(corporation_id: i64) -> Vec<EsiCorpWalletDivision>
+client.corp_wallet_journal(corporation_id: i64, division: i32) -> Vec<EsiWalletJournalEntry>  // paginated
+client.corp_wallet_transactions(corporation_id: i64, division: i32) -> Vec<EsiWalletTransaction>
+```
+
+**Corporation — Assets:**
+
+```rust
+client.corp_assets(corporation_id: i64) -> Vec<EsiAssetItem>  // paginated
+client.corp_asset_names(corporation_id: i64, item_ids: &[i64]) -> Vec<EsiAssetName>  // POST
+client.corp_asset_locations(corporation_id: i64, item_ids: &[i64]) -> Vec<EsiAssetLocation>  // POST
+```
+
+**Corporation — Industry:**
+
+```rust
+client.corp_industry_jobs(corporation_id: i64) -> Vec<EsiIndustryJob>  // paginated
+client.corp_blueprints(corporation_id: i64) -> Vec<EsiBlueprint>  // paginated
+```
+
+**Corporation — Contracts:**
+
+```rust
+client.corp_contracts(corporation_id: i64) -> Vec<EsiContract>  // paginated
+```
+
+**Corporation — Orders:**
+
+```rust
+client.corp_orders(corporation_id: i64) -> Vec<EsiCharacterOrder>
+client.corp_order_history(corporation_id: i64) -> Vec<EsiCharacterOrder>  // paginated
+```
+
+**Corporation — Members:**
+
+```rust
+client.corp_members(corporation_id: i64) -> Vec<i64>
+client.corp_member_titles(corporation_id: i64) -> Vec<EsiCorpMemberTitle>
+client.corp_member_roles(corporation_id: i64) -> Vec<EsiCorpMemberRole>
+client.corp_member_tracking(corporation_id: i64) -> Vec<EsiCorpMemberTracking>
+```
+
+**Corporation — Structures:**
+
+```rust
+client.corp_structures(corporation_id: i64) -> Vec<EsiCorpStructure>  // paginated
+client.corp_starbases(corporation_id: i64) -> Vec<EsiCorpStarbase>
+client.corp_starbase_detail(corporation_id: i64, starbase_id: i64, system_id: i32) -> EsiCorpStarbaseDetail
+```
+
 **Other:**
 
 ```rust
@@ -422,6 +475,28 @@ client.clear_cache().await
 
 **`EsiPlanetDetail`** — `links/pins/routes: Vec<serde_json::Value>` (complex nested PI structures; typed access deferred)
 
+**`EsiCorpWalletDivision`** — `division: i32`, `balance: f64`
+
+**`EsiAssetName`** — `item_id: i64`, `name: String`
+
+**`EsiAssetLocation`** — `item_id: i64`, `position: EsiBookmarkCoordinates`
+
+**`EsiCorpMemberTitle`** — `character_id: i64`, `titles: Vec<i32>` (default)
+
+**`EsiCorpMemberRole`** — `character_id: i64`, `roles/roles_at_hq/roles_at_base/roles_at_other: Vec<String>` (all default)
+
+**`EsiCorpMemberTracking`** — `character_id: i64`, optional: `location_id`, `logon_date`, `logoff_date`, `ship_type_id`, `start_date`
+
+**`EsiCorpStructure`** — `structure_id: i64`, `corporation_id: i64`, `system_id: i32`, `type_id: i32`, `state: String`, optional: `name`, `profile_id`, `fuel_expires`, timers, `reinforce_hour`, default-vec: `services`
+
+**`EsiCorpStructureService`** — `name: String`, `state: String`
+
+**`EsiCorpStarbase`** — `starbase_id: i64`, `system_id: i32`, `type_id: i32`, `state: String`, optional: `moon_id`, `onlined_since`, `reinforced_until`, `unanchor_at`
+
+**`EsiCorpStarbaseDetail`** — `state: String`, boolean flags, optional role access fields, optional thresholds, default-vec: `fuels`
+
+**`EsiStarbaseFuel`** — `type_id: i32`, `quantity: i32`
+
 **`EsiTokens`** — `access_token: SecretString`, `refresh_token: SecretString`, `expires_at: DateTime<Utc>`
 
 ### Error handling
@@ -475,6 +550,18 @@ client.clear_cache().await;
 ```
 
 Best for endpoints that change infrequently: `market_prices`, `get_character`, `get_corporation`, `get_alliance`, etc. Not used automatically for paginated endpoints.
+
+## Migrating from 0.4.x to 0.5.0
+
+No breaking changes. 0.5.0 adds 18 corporation-level endpoints (director/CEO role required):
+
+- **Corp Wallet**: `corp_wallet_balances`, `corp_wallet_journal`, `corp_wallet_transactions`
+- **Corp Assets**: `corp_assets`, `corp_asset_names`, `corp_asset_locations`
+- **Corp Industry**: `corp_industry_jobs`, `corp_blueprints`
+- **Corp Contracts**: `corp_contracts`
+- **Corp Orders**: `corp_orders`, `corp_order_history`
+- **Corp Members**: `corp_members`, `corp_member_titles`, `corp_member_roles`, `corp_member_tracking`
+- **Corp Structures**: `corp_structures`, `corp_starbases`, `corp_starbase_detail`
 
 ## Migrating from 0.3.x to 0.4.0
 

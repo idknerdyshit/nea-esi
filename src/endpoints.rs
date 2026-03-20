@@ -4,10 +4,12 @@ use serde::de::DeserializeOwned;
 use tracing::debug;
 
 use crate::{
-    EsiAllianceInfo, EsiAssetItem, EsiAttributes, EsiBlueprint, EsiBookmark, EsiBookmarkFolder,
-    EsiCalendarEvent, EsiCalendarEventDetail, EsiCategoryInfo, EsiCharacterInfo,
-    EsiCharacterOrder, EsiClient, EsiClones, EsiConstellationInfo, EsiContact, EsiContactLabel,
-    EsiContract, EsiContractBid, EsiContractItem, EsiCorporationInfo, EsiError, EsiFitting,
+    EsiAllianceInfo, EsiAssetItem, EsiAssetLocation, EsiAssetName, EsiAttributes, EsiBlueprint,
+    EsiBookmark, EsiBookmarkFolder, EsiCalendarEvent, EsiCalendarEventDetail, EsiCategoryInfo,
+    EsiCharacterInfo, EsiCharacterOrder, EsiClient, EsiClones, EsiConstellationInfo, EsiContact,
+    EsiContactLabel, EsiContract, EsiContractBid, EsiContractItem, EsiCorpMemberRole,
+    EsiCorpMemberTitle, EsiCorpMemberTracking, EsiCorpStarbase, EsiCorpStarbaseDetail,
+    EsiCorpStructure, EsiCorpWalletDivision, EsiCorporationInfo, EsiError, EsiFitting,
     EsiGroupInfo, EsiIncursion, EsiIndustryJob, EsiKillmail, EsiKillmailRef, EsiLocation,
     EsiLoyaltyPoints, EsiLoyaltyStoreOffer, EsiMailBody, EsiMailHeader, EsiMailLabels,
     EsiMarketGroupInfo, EsiMarketHistoryEntry, EsiMarketOrder, EsiMarketPrice, EsiNewFitting,
@@ -40,7 +42,7 @@ impl EsiClient {
     async fn post_json<T: DeserializeOwned>(
         &self,
         path: &str,
-        body: &impl serde::Serialize,
+        body: &(impl serde::Serialize + ?Sized),
     ) -> Result<T> {
         let url = format!("{}{}", self.base_url, path);
         let resp = self.request_post(&url, body).await?;
@@ -904,6 +906,244 @@ impl EsiClient {
     #[tracing::instrument(skip(self))]
     pub async fn server_status(&self) -> Result<EsiServerStatus> {
         self.get_json("/status/").await
+    }
+
+    // -----------------------------------------------------------------------
+    // Corp wallet endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch corporation wallet division balances.
+    #[tracing::instrument(skip(self))]
+    pub async fn corp_wallet_balances(
+        &self,
+        corporation_id: i64,
+    ) -> Result<Vec<EsiCorpWalletDivision>> {
+        self.get_json(&format!("/corporations/{}/wallets/", corporation_id))
+            .await
+    }
+
+    /// Fetch corporation wallet journal for a division (paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn corp_wallet_journal(
+        &self,
+        corporation_id: i64,
+        division: i32,
+    ) -> Result<Vec<EsiWalletJournalEntry>> {
+        self.get_paginated_json(&format!(
+            "/corporations/{}/wallets/{}/journal/",
+            corporation_id, division
+        ))
+        .await
+    }
+
+    /// Fetch corporation wallet transactions for a division.
+    #[tracing::instrument(skip(self))]
+    pub async fn corp_wallet_transactions(
+        &self,
+        corporation_id: i64,
+        division: i32,
+    ) -> Result<Vec<EsiWalletTransaction>> {
+        self.get_json(&format!(
+            "/corporations/{}/wallets/{}/transactions/",
+            corporation_id, division
+        ))
+        .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Corp asset endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch corporation assets (paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn corp_assets(&self, corporation_id: i64) -> Result<Vec<EsiAssetItem>> {
+        self.get_paginated_json(&format!("/corporations/{}/assets/", corporation_id))
+            .await
+    }
+
+    /// Resolve corporation asset item IDs to names.
+    #[tracing::instrument(skip(self, item_ids))]
+    pub async fn corp_asset_names(
+        &self,
+        corporation_id: i64,
+        item_ids: &[i64],
+    ) -> Result<Vec<EsiAssetName>> {
+        self.post_json(
+            &format!("/corporations/{}/assets/names/", corporation_id),
+            item_ids,
+        )
+        .await
+    }
+
+    /// Resolve corporation asset item IDs to locations.
+    #[tracing::instrument(skip(self, item_ids))]
+    pub async fn corp_asset_locations(
+        &self,
+        corporation_id: i64,
+        item_ids: &[i64],
+    ) -> Result<Vec<EsiAssetLocation>> {
+        self.post_json(
+            &format!("/corporations/{}/assets/locations/", corporation_id),
+            item_ids,
+        )
+        .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Corp industry endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch corporation industry jobs (paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn corp_industry_jobs(
+        &self,
+        corporation_id: i64,
+    ) -> Result<Vec<EsiIndustryJob>> {
+        self.get_paginated_json(&format!(
+            "/corporations/{}/industry/jobs/",
+            corporation_id
+        ))
+        .await
+    }
+
+    /// Fetch corporation blueprints (paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn corp_blueprints(&self, corporation_id: i64) -> Result<Vec<EsiBlueprint>> {
+        self.get_paginated_json(&format!(
+            "/corporations/{}/blueprints/",
+            corporation_id
+        ))
+        .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Corp contract endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch corporation contracts (paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn corp_contracts(&self, corporation_id: i64) -> Result<Vec<EsiContract>> {
+        self.get_paginated_json(&format!(
+            "/corporations/{}/contracts/",
+            corporation_id
+        ))
+        .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Corp order endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch corporation active market orders.
+    #[tracing::instrument(skip(self))]
+    pub async fn corp_orders(&self, corporation_id: i64) -> Result<Vec<EsiCharacterOrder>> {
+        self.get_json(&format!("/corporations/{}/orders/", corporation_id))
+            .await
+    }
+
+    /// Fetch corporation order history (paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn corp_order_history(
+        &self,
+        corporation_id: i64,
+    ) -> Result<Vec<EsiCharacterOrder>> {
+        self.get_paginated_json(&format!(
+            "/corporations/{}/orders/history/",
+            corporation_id
+        ))
+        .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Corp member endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch corporation member IDs.
+    #[tracing::instrument(skip(self))]
+    pub async fn corp_members(&self, corporation_id: i64) -> Result<Vec<i64>> {
+        self.get_json(&format!("/corporations/{}/members/", corporation_id))
+            .await
+    }
+
+    /// Fetch corporation member titles.
+    #[tracing::instrument(skip(self))]
+    pub async fn corp_member_titles(
+        &self,
+        corporation_id: i64,
+    ) -> Result<Vec<EsiCorpMemberTitle>> {
+        self.get_json(&format!(
+            "/corporations/{}/members/titles/",
+            corporation_id
+        ))
+        .await
+    }
+
+    /// Fetch corporation member roles.
+    #[tracing::instrument(skip(self))]
+    pub async fn corp_member_roles(
+        &self,
+        corporation_id: i64,
+    ) -> Result<Vec<EsiCorpMemberRole>> {
+        self.get_json(&format!("/corporations/{}/roles/", corporation_id))
+            .await
+    }
+
+    /// Fetch corporation member tracking info.
+    #[tracing::instrument(skip(self))]
+    pub async fn corp_member_tracking(
+        &self,
+        corporation_id: i64,
+    ) -> Result<Vec<EsiCorpMemberTracking>> {
+        self.get_json(&format!(
+            "/corporations/{}/membertracking/",
+            corporation_id
+        ))
+        .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Corp structure endpoints (authenticated)
+    // -----------------------------------------------------------------------
+
+    /// Fetch corporation structures (paginated).
+    #[tracing::instrument(skip(self))]
+    pub async fn corp_structures(
+        &self,
+        corporation_id: i64,
+    ) -> Result<Vec<EsiCorpStructure>> {
+        self.get_paginated_json(&format!(
+            "/corporations/{}/structures/",
+            corporation_id
+        ))
+        .await
+    }
+
+    /// Fetch corporation starbases (POSes).
+    #[tracing::instrument(skip(self))]
+    pub async fn corp_starbases(
+        &self,
+        corporation_id: i64,
+    ) -> Result<Vec<EsiCorpStarbase>> {
+        self.get_json(&format!(
+            "/corporations/{}/starbases/",
+            corporation_id
+        ))
+        .await
+    }
+
+    /// Fetch detailed configuration of a specific starbase.
+    #[tracing::instrument(skip(self))]
+    pub async fn corp_starbase_detail(
+        &self,
+        corporation_id: i64,
+        starbase_id: i64,
+        system_id: i32,
+    ) -> Result<EsiCorpStarbaseDetail> {
+        self.get_json(&format!(
+            "/corporations/{}/starbases/{}/?system_id={}",
+            corporation_id, starbase_id, system_id
+        ))
+        .await
     }
 }
 

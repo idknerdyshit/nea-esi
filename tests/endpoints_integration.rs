@@ -3,7 +3,7 @@
 use wiremock::matchers::{method, path, query_param, body_json};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use nea_esi::{EsiClient, EsiNewFitting, EsiFittingItem, EsiNewMail, EsiMailRecipient};
+use nea_esi::{EsiClient, EsiFittingItem, EsiMailRecipient, EsiNewFitting, EsiNewMail};
 
 // ---------------------------------------------------------------------------
 // create_fitting — POST
@@ -980,4 +980,605 @@ async fn test_get_character() {
 
     assert_eq!(info.name, "Test Pilot");
     assert_eq!(info.corporation_id, Some(98000001));
+}
+
+// ===========================================================================
+// Corporation endpoint tests (Phase 3)
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// corp_wallet_balances — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_wallet_balances() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([
+        {"division": 1, "balance": 123456789.50},
+        {"division": 2, "balance": 500.00}
+    ]);
+
+    Mock::given(method("GET"))
+        .and(path("/corporations/98000001/wallets/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let divs = client.corp_wallet_balances(98000001).await.unwrap();
+
+    assert_eq!(divs.len(), 2);
+    assert_eq!(divs[0].division, 1);
+    assert!((divs[0].balance - 123456789.50).abs() < f64::EPSILON);
+}
+
+// ---------------------------------------------------------------------------
+// corp_wallet_journal — paginated GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_wallet_journal() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "id": 987654321,
+        "date": "2026-03-15T10:30:00Z",
+        "ref_type": "corporation_account_withdrawal",
+        "amount": -5000000.0
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/corporations/98000001/wallets/1/journal/"))
+        .and(query_param("page", "1"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(&body)
+                .insert_header("x-pages", "1"),
+        )
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let entries = client.corp_wallet_journal(98000001, 1).await.unwrap();
+
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].id, 987654321);
+}
+
+// ---------------------------------------------------------------------------
+// corp_wallet_transactions — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_wallet_transactions() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "transaction_id": 1234567890_i64,
+        "date": "2026-03-15T10:30:00Z",
+        "type_id": 34,
+        "location_id": 60003760,
+        "unit_price": 5.25,
+        "quantity": 100000,
+        "client_id": 91234567,
+        "is_buy": true,
+        "is_personal": false,
+        "journal_ref_id": 987654321
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/corporations/98000001/wallets/1/transactions/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let txns = client.corp_wallet_transactions(98000001, 1).await.unwrap();
+
+    assert_eq!(txns.len(), 1);
+    assert_eq!(txns[0].transaction_id, 1234567890);
+}
+
+// ---------------------------------------------------------------------------
+// corp_assets — paginated GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_assets() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "item_id": 1234567890_i64,
+        "type_id": 587,
+        "location_id": 60003760,
+        "location_type": "station",
+        "location_flag": "Hangar",
+        "quantity": 1,
+        "is_singleton": true
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/corporations/98000001/assets/"))
+        .and(query_param("page", "1"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(&body)
+                .insert_header("x-pages", "1"),
+        )
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let assets = client.corp_assets(98000001).await.unwrap();
+
+    assert_eq!(assets.len(), 1);
+    assert_eq!(assets[0].type_id, 587);
+}
+
+// ---------------------------------------------------------------------------
+// corp_asset_names — POST
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_asset_names() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .and(path("/corporations/98000001/assets/names/"))
+        .and(body_json(serde_json::json!([1234567890_i64])))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(serde_json::json!([
+                {"item_id": 1234567890_i64, "name": "My Ship"}
+            ])),
+        )
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let names = client
+        .corp_asset_names(98000001, &[1234567890])
+        .await
+        .unwrap();
+
+    assert_eq!(names.len(), 1);
+    assert_eq!(names[0].name, "My Ship");
+}
+
+// ---------------------------------------------------------------------------
+// corp_asset_locations — POST
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_asset_locations() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .and(path("/corporations/98000001/assets/locations/"))
+        .and(body_json(serde_json::json!([1234567890_i64])))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(serde_json::json!([
+                {"item_id": 1234567890_i64, "position": {"x": 1.0, "y": 2.0, "z": 3.0}}
+            ])),
+        )
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let locs = client
+        .corp_asset_locations(98000001, &[1234567890])
+        .await
+        .unwrap();
+
+    assert_eq!(locs.len(), 1);
+    assert!((locs[0].position.x - 1.0).abs() < f64::EPSILON);
+}
+
+// ---------------------------------------------------------------------------
+// corp_industry_jobs — paginated GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_industry_jobs() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "job_id": 456,
+        "installer_id": 91234567,
+        "facility_id": 60003760,
+        "activity_id": 1,
+        "blueprint_id": 1234567890_i64,
+        "blueprint_type_id": 687,
+        "blueprint_location_id": 60003760,
+        "output_location_id": 60003760,
+        "runs": 5,
+        "status": "active",
+        "duration": 7200,
+        "start_date": "2026-03-15T10:00:00Z",
+        "end_date": "2026-03-15T12:00:00Z"
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/corporations/98000001/industry/jobs/"))
+        .and(query_param("page", "1"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(&body)
+                .insert_header("x-pages", "1"),
+        )
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let jobs = client.corp_industry_jobs(98000001).await.unwrap();
+
+    assert_eq!(jobs.len(), 1);
+    assert_eq!(jobs[0].job_id, 456);
+}
+
+// ---------------------------------------------------------------------------
+// corp_blueprints — paginated GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_blueprints() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "item_id": 1234567890_i64,
+        "type_id": 687,
+        "location_id": 60003760,
+        "location_flag": "CorpSAG1",
+        "quantity": -1,
+        "time_efficiency": 20,
+        "material_efficiency": 10,
+        "runs": -1
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/corporations/98000001/blueprints/"))
+        .and(query_param("page", "1"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(&body)
+                .insert_header("x-pages", "1"),
+        )
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let bps = client.corp_blueprints(98000001).await.unwrap();
+
+    assert_eq!(bps.len(), 1);
+    assert_eq!(bps[0].type_id, 687);
+}
+
+// ---------------------------------------------------------------------------
+// corp_contracts — paginated GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_contracts() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "contract_id": 789012,
+        "issuer_id": 91234567,
+        "issuer_corporation_id": 98000001,
+        "type": "item_exchange",
+        "status": "outstanding",
+        "availability": "corporation",
+        "date_issued": "2026-03-15T10:00:00Z",
+        "date_expired": "2026-03-29T10:00:00Z",
+        "for_corporation": true
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/corporations/98000001/contracts/"))
+        .and(query_param("page", "1"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(&body)
+                .insert_header("x-pages", "1"),
+        )
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let contracts = client.corp_contracts(98000001).await.unwrap();
+
+    assert_eq!(contracts.len(), 1);
+    assert!(contracts[0].for_corporation);
+}
+
+// ---------------------------------------------------------------------------
+// corp_orders — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_orders() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "order_id": 6789012345_i64,
+        "type_id": 34,
+        "region_id": 10000002,
+        "location_id": 60003760,
+        "range": "station",
+        "is_buy_order": false,
+        "price": 6.00,
+        "volume_total": 1000000,
+        "volume_remain": 500000,
+        "issued": "2026-03-10T08:15:00Z",
+        "min_volume": 1,
+        "duration": 90
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/corporations/98000001/orders/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let orders = client.corp_orders(98000001).await.unwrap();
+
+    assert_eq!(orders.len(), 1);
+    assert!(!orders[0].is_buy_order);
+}
+
+// ---------------------------------------------------------------------------
+// corp_order_history — paginated GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_order_history() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "order_id": 6789012345_i64,
+        "type_id": 34,
+        "region_id": 10000002,
+        "location_id": 60003760,
+        "range": "station",
+        "is_buy_order": true,
+        "price": 5.00,
+        "volume_total": 500000,
+        "volume_remain": 0,
+        "issued": "2026-03-01T08:15:00Z",
+        "min_volume": 1,
+        "duration": 90,
+        "state": "expired"
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/corporations/98000001/orders/history/"))
+        .and(query_param("page", "1"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(&body)
+                .insert_header("x-pages", "1"),
+        )
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let orders = client.corp_order_history(98000001).await.unwrap();
+
+    assert_eq!(orders.len(), 1);
+    assert_eq!(orders[0].state, Some("expired".to_string()));
+}
+
+// ---------------------------------------------------------------------------
+// corp_members — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_members() {
+    let server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/corporations/98000001/members/"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(serde_json::json!([91234567_i64, 92345678_i64])),
+        )
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let members = client.corp_members(98000001).await.unwrap();
+
+    assert_eq!(members, vec![91234567_i64, 92345678_i64]);
+}
+
+// ---------------------------------------------------------------------------
+// corp_member_titles — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_member_titles() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "character_id": 91234567,
+        "titles": [1, 16]
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/corporations/98000001/members/titles/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let titles = client.corp_member_titles(98000001).await.unwrap();
+
+    assert_eq!(titles.len(), 1);
+    assert_eq!(titles[0].titles, vec![1, 16]);
+}
+
+// ---------------------------------------------------------------------------
+// corp_member_roles — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_member_roles() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "character_id": 91234567,
+        "roles": ["Director", "Hangar_Access"],
+        "roles_at_hq": ["Hangar_Access"],
+        "roles_at_base": [],
+        "roles_at_other": []
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/corporations/98000001/roles/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let roles = client.corp_member_roles(98000001).await.unwrap();
+
+    assert_eq!(roles.len(), 1);
+    assert_eq!(roles[0].roles, vec!["Director", "Hangar_Access"]);
+}
+
+// ---------------------------------------------------------------------------
+// corp_member_tracking — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_member_tracking() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "character_id": 91234567,
+        "location_id": 60003760,
+        "logon_date": "2026-03-20T10:00:00Z",
+        "logoff_date": "2026-03-20T08:00:00Z",
+        "ship_type_id": 587,
+        "start_date": "2020-01-15T00:00:00Z"
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/corporations/98000001/membertracking/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let tracking = client.corp_member_tracking(98000001).await.unwrap();
+
+    assert_eq!(tracking.len(), 1);
+    assert_eq!(tracking[0].ship_type_id, Some(587));
+}
+
+// ---------------------------------------------------------------------------
+// corp_structures — paginated GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_structures() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "structure_id": 1234567890123_i64,
+        "corporation_id": 98000001,
+        "system_id": 30000142,
+        "type_id": 35832,
+        "state": "shield_vulnerable",
+        "name": "Home Citadel",
+        "services": [{"name": "Manufacturing", "state": "online"}]
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/corporations/98000001/structures/"))
+        .and(query_param("page", "1"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(&body)
+                .insert_header("x-pages", "1"),
+        )
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let structures = client.corp_structures(98000001).await.unwrap();
+
+    assert_eq!(structures.len(), 1);
+    assert_eq!(structures[0].state, "shield_vulnerable");
+    assert_eq!(structures[0].services.len(), 1);
+    assert_eq!(structures[0].services[0].name, "Manufacturing");
+}
+
+// ---------------------------------------------------------------------------
+// corp_starbases — simple GET
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_starbases() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "starbase_id": 12345678_i64,
+        "system_id": 30000142,
+        "type_id": 16213,
+        "state": "online",
+        "moon_id": 40009082
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/corporations/98000001/starbases/"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let starbases = client.corp_starbases(98000001).await.unwrap();
+
+    assert_eq!(starbases.len(), 1);
+    assert_eq!(starbases[0].state, "online");
+    assert_eq!(starbases[0].moon_id, Some(40009082));
+}
+
+// ---------------------------------------------------------------------------
+// corp_starbase_detail — simple GET with query param
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corp_starbase_detail() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "state": "online",
+        "allow_alliance_members": true,
+        "allow_corporation_members": true,
+        "use_alliance_standings": false,
+        "attack_if_at_war": true,
+        "attack_if_other_security_status_dropping": false,
+        "fuels": [{"type_id": 4051, "quantity": 960}]
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/corporations/98000001/starbases/12345678/"))
+        .and(query_param("system_id", "30000142"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let detail = client
+        .corp_starbase_detail(98000001, 12345678, 30000142)
+        .await
+        .unwrap();
+
+    assert_eq!(detail.state, "online");
+    assert!(detail.allow_alliance_members);
+    assert!(detail.attack_if_at_war);
+    assert_eq!(detail.fuels.len(), 1);
+    assert_eq!(detail.fuels[0].type_id, 4051);
 }
