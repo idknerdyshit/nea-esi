@@ -1618,6 +1618,682 @@ pub struct EsiCorporationHistoryEntry {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 5 — Missing Endpoints Types
+// ---------------------------------------------------------------------------
+
+// Alliance types
+
+/// Alliance icon URLs.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiAllianceIcons {
+    #[serde(default)]
+    pub px64: Option<String>,
+    #[serde(default)]
+    pub px128: Option<String>,
+}
+
+// Character info & history types
+
+/// Character affiliation (corporation, alliance, faction).
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCharacterAffiliation {
+    pub character_id: i64,
+    pub corporation_id: i64,
+    #[serde(default)]
+    pub alliance_id: Option<i64>,
+    #[serde(default)]
+    pub faction_id: Option<i32>,
+}
+
+/// Character portrait URLs.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCharacterPortrait {
+    #[serde(default)]
+    pub px64: Option<String>,
+    #[serde(default)]
+    pub px128: Option<String>,
+    #[serde(default)]
+    pub px256: Option<String>,
+    #[serde(default)]
+    pub px512: Option<String>,
+}
+
+/// Character roles.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCharacterRoles {
+    #[serde(default)]
+    pub roles: Vec<String>,
+    #[serde(default)]
+    pub roles_at_hq: Vec<String>,
+    #[serde(default)]
+    pub roles_at_base: Vec<String>,
+    #[serde(default)]
+    pub roles_at_other: Vec<String>,
+}
+
+/// A character title.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCharacterTitle {
+    pub title_id: i32,
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
+/// A standing entry.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiStanding {
+    pub from_id: i64,
+    pub from_type: String,
+    pub standing: f64,
+}
+
+/// A character medal.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCharacterMedal {
+    pub medal_id: i32,
+    pub title: String,
+    pub description: String,
+    pub corporation_id: i64,
+    pub issuer_id: i64,
+    pub date: DateTime<Utc>,
+    pub reason: String,
+    pub status: String,
+    #[serde(default)]
+    pub graphics: Vec<EsiMedalGraphic>,
+}
+
+/// A medal graphic layer.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiMedalGraphic {
+    pub part: i32,
+    pub layer: i32,
+    #[serde(default)]
+    pub graphic: Option<String>,
+    #[serde(default)]
+    pub color: Option<i32>,
+}
+
+/// Agent research info.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiAgentResearch {
+    pub agent_id: i64,
+    pub skill_type_id: i32,
+    pub started_at: DateTime<Utc>,
+    pub points_per_day: f64,
+    pub remainder_points: f64,
+}
+
+/// Jump fatigue info.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiFatigue {
+    #[serde(default)]
+    pub last_jump_date: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub jump_fatigue_expire_date: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub last_update_date: Option<DateTime<Utc>>,
+}
+
+/// Character FW stats.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCharacterFwStats {
+    #[serde(default)]
+    pub faction_id: Option<i32>,
+    #[serde(default)]
+    pub enlisted_on: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub current_rank: Option<i32>,
+    #[serde(default)]
+    pub highest_rank: Option<i32>,
+    #[serde(default)]
+    pub kills: Option<EsiFwTotals>,
+    #[serde(default)]
+    pub victory_points: Option<EsiFwTotals>,
+}
+
+// Calendar write types
+
+/// A calendar event attendee.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiEventAttendee {
+    pub character_id: i64,
+    #[serde(default)]
+    pub event_response: Option<String>,
+}
+
+/// Body for setting an event response.
+#[derive(Debug, Clone, Serialize)]
+pub struct EsiEventResponse {
+    pub response: String,
+}
+
+// Mail management types
+
+/// Body for creating a mail label.
+#[derive(Debug, Clone, Serialize)]
+pub struct EsiNewMailLabel {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+}
+
+/// A mailing list.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiMailingList {
+    pub mailing_list_id: i64,
+    pub name: String,
+}
+
+/// Body for updating mail metadata (read status, labels).
+#[derive(Debug, Clone, Serialize)]
+pub struct EsiMailUpdate {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub read: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub labels: Option<Vec<i32>>,
+}
+
+// Mining types
+
+/// A personal mining ledger entry.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiMiningEntry {
+    pub date: NaiveDate,
+    pub solar_system_id: i32,
+    pub type_id: i32,
+    pub quantity: i64,
+}
+
+/// A contact notification.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiContactNotification {
+    pub notification_id: i64,
+    pub sender_character_id: i64,
+    pub send_date: DateTime<Utc>,
+    pub standing_level: f64,
+    #[serde(default)]
+    pub message: Option<String>,
+}
+
+// Public contract types (may reuse EsiContract/EsiContractBid/EsiContractItem)
+
+// Corporation additional types
+
+/// Corporation container audit log entry.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiContainerLog {
+    pub logged_at: DateTime<Utc>,
+    pub container_id: i64,
+    pub container_type_id: i32,
+    pub character_id: i64,
+    pub action: String,
+    pub location_flag: String,
+    pub location_id: i64,
+    #[serde(default)]
+    pub new_config_bitmask: Option<i32>,
+    #[serde(default)]
+    pub old_config_bitmask: Option<i32>,
+    #[serde(default)]
+    pub password_type: Option<String>,
+    #[serde(default)]
+    pub quantity: Option<i32>,
+    #[serde(default)]
+    pub type_id: Option<i32>,
+}
+
+/// A customs office (POCO).
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCustomsOffice {
+    pub office_id: i64,
+    pub system_id: i32,
+    #[serde(default)]
+    pub reinforce_exit_start: Option<i32>,
+    #[serde(default)]
+    pub reinforce_exit_end: Option<i32>,
+    #[serde(default)]
+    pub alliance_tax_rate: Option<f64>,
+    #[serde(default)]
+    pub corporation_tax_rate: Option<f64>,
+    #[serde(default)]
+    pub standing_level: Option<String>,
+    #[serde(default)]
+    pub terrible_standing_tax_rate: Option<f64>,
+    #[serde(default)]
+    pub bad_standing_tax_rate: Option<f64>,
+    #[serde(default)]
+    pub neutral_standing_tax_rate: Option<f64>,
+    #[serde(default)]
+    pub good_standing_tax_rate: Option<f64>,
+    #[serde(default)]
+    pub excellent_standing_tax_rate: Option<f64>,
+    #[serde(default)]
+    pub allow_access_with_standings: bool,
+    #[serde(default)]
+    pub allow_alliance_access: bool,
+}
+
+/// Corporation divisions.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCorpDivisions {
+    #[serde(default)]
+    pub hangar: Vec<EsiCorpDivision>,
+    #[serde(default)]
+    pub wallet: Vec<EsiCorpDivision>,
+}
+
+/// A single division entry.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCorpDivision {
+    pub division: i32,
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
+/// A corporation facility.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCorpFacility {
+    pub facility_id: i64,
+    pub system_id: i32,
+    pub type_id: i32,
+}
+
+/// Corporation FW stats.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCorpFwStats {
+    #[serde(default)]
+    pub faction_id: Option<i32>,
+    #[serde(default)]
+    pub enlisted_on: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub pilots: Option<i32>,
+    #[serde(default)]
+    pub kills: Option<EsiFwTotals>,
+    #[serde(default)]
+    pub victory_points: Option<EsiFwTotals>,
+}
+
+/// Corporation icon URLs.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCorpIcons {
+    #[serde(default)]
+    pub px64: Option<String>,
+    #[serde(default)]
+    pub px128: Option<String>,
+    #[serde(default)]
+    pub px256: Option<String>,
+}
+
+/// A corporation medal.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCorpMedal {
+    pub medal_id: i32,
+    pub title: String,
+    pub description: String,
+    pub creator_id: i64,
+    pub created_at: DateTime<Utc>,
+}
+
+/// An issued medal.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiIssuedMedal {
+    pub medal_id: i32,
+    pub character_id: i64,
+    pub issuer_id: i64,
+    pub issued_at: DateTime<Utc>,
+    pub reason: String,
+    pub status: String,
+}
+
+/// A role change history entry.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiRoleHistory {
+    pub character_id: i64,
+    pub changed_at: DateTime<Utc>,
+    pub issuer_id: i64,
+    pub role_type: String,
+    #[serde(default)]
+    pub before: Vec<String>,
+    #[serde(default)]
+    pub after: Vec<String>,
+}
+
+/// A shareholder entry.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiShareholder {
+    pub shareholder_id: i64,
+    pub shareholder_type: String,
+    pub share_count: i64,
+}
+
+/// A corporation title.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCorpTitle {
+    pub title_id: i32,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub roles: Vec<String>,
+    #[serde(default)]
+    pub roles_at_hq: Vec<String>,
+    #[serde(default)]
+    pub roles_at_base: Vec<String>,
+    #[serde(default)]
+    pub roles_at_other: Vec<String>,
+    #[serde(default)]
+    pub grantable_roles: Vec<String>,
+    #[serde(default)]
+    pub grantable_roles_at_hq: Vec<String>,
+    #[serde(default)]
+    pub grantable_roles_at_base: Vec<String>,
+    #[serde(default)]
+    pub grantable_roles_at_other: Vec<String>,
+}
+
+// Corporation mining types
+
+/// A moon mining extraction.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiMiningExtraction {
+    pub structure_id: i64,
+    pub moon_id: i32,
+    pub extraction_start_time: DateTime<Utc>,
+    pub chunk_arrival_time: DateTime<Utc>,
+    pub natural_decay_time: DateTime<Utc>,
+}
+
+/// A mining observer.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiMiningObserver {
+    pub observer_id: i64,
+    pub observer_type: String,
+    pub last_updated: NaiveDate,
+}
+
+/// A mining observer entry (character mining at observer).
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiMiningObserverEntry {
+    pub character_id: i64,
+    pub recorded_corporation_id: i64,
+    pub type_id: i32,
+    pub quantity: i64,
+    pub last_updated: NaiveDate,
+}
+
+// Fleet write types
+
+/// Body for updating fleet settings.
+#[derive(Debug, Clone, Serialize)]
+pub struct EsiFleetUpdate {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_free_move: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub motd: Option<String>,
+}
+
+/// Body for inviting a character to a fleet.
+#[derive(Debug, Clone, Serialize)]
+pub struct EsiFleetInvitation {
+    pub character_id: i64,
+    pub role: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub squad_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wing_id: Option<i64>,
+}
+
+/// Body for moving a fleet member.
+#[derive(Debug, Clone, Serialize)]
+pub struct EsiFleetMovement {
+    pub role: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub squad_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wing_id: Option<i64>,
+}
+
+/// Response from creating a fleet wing.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiFleetWingCreated {
+    pub wing_id: i64,
+}
+
+/// Response from creating a fleet squad.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiFleetSquadCreated {
+    pub squad_id: i64,
+}
+
+/// Body for naming a fleet wing or squad.
+#[derive(Debug, Clone, Serialize)]
+pub struct EsiFleetNaming {
+    pub name: String,
+}
+
+// FW leaderboard types
+
+/// Character FW leaderboards.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiFwCharacterLeaderboards {
+    pub kills: EsiFwLeaderboardCategory,
+    pub victory_points: EsiFwLeaderboardCategory,
+}
+
+/// Corporation FW leaderboards.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiFwCorporationLeaderboards {
+    pub kills: EsiFwLeaderboardCategory,
+    pub victory_points: EsiFwLeaderboardCategory,
+}
+
+// Industry public types
+
+/// A public industry facility.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiIndustryFacility {
+    pub facility_id: i64,
+    pub owner_id: i64,
+    pub region_id: i32,
+    pub solar_system_id: i32,
+    pub type_id: i32,
+    #[serde(default)]
+    pub tax: Option<f64>,
+}
+
+/// Industry system cost indices.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiIndustrySystem {
+    pub solar_system_id: i32,
+    #[serde(default)]
+    pub cost_indices: Vec<EsiCostIndex>,
+}
+
+/// A cost index for an activity.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCostIndex {
+    pub activity: String,
+    pub cost_index: f64,
+}
+
+// UI types
+
+/// Body for opening a new mail window.
+#[derive(Debug, Clone, Serialize)]
+pub struct EsiNewMailWindow {
+    pub recipients: Vec<i64>,
+    pub subject: String,
+    pub body: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub to_corp_or_alliance_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub to_mailing_list_id: Option<i64>,
+}
+
+// Universe additional types
+
+/// An ancestry.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiAncestry {
+    pub id: i32,
+    pub name: String,
+    pub bloodline_id: i32,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub short_description: Option<String>,
+    #[serde(default)]
+    pub icon_id: Option<i32>,
+}
+
+/// An asteroid belt.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiAsteroidBelt {
+    pub name: String,
+    pub system_id: i32,
+    #[serde(default)]
+    pub position: Option<EsiPosition>,
+}
+
+/// A 3D position.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiPosition {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+}
+
+/// A bloodline.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiBloodline {
+    pub bloodline_id: i32,
+    pub name: String,
+    pub race_id: i32,
+    pub corporation_id: i64,
+    pub ship_type_id: i32,
+    pub charisma: i32,
+    pub intelligence: i32,
+    pub memory: i32,
+    pub perception: i32,
+    pub willpower: i32,
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
+/// A faction.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiFaction {
+    pub faction_id: i32,
+    pub name: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub corporation_id: Option<i64>,
+    #[serde(default)]
+    pub militia_corporation_id: Option<i64>,
+    #[serde(default)]
+    pub solar_system_id: Option<i32>,
+    #[serde(default)]
+    pub size_factor: Option<f64>,
+    #[serde(default)]
+    pub station_count: Option<i32>,
+    #[serde(default)]
+    pub station_system_count: Option<i32>,
+    #[serde(default)]
+    pub is_unique: bool,
+}
+
+/// A graphic.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiGraphic {
+    pub graphic_id: i32,
+    #[serde(default)]
+    pub collision_file: Option<String>,
+    #[serde(default)]
+    pub graphic_file: Option<String>,
+    #[serde(default)]
+    pub icon_folder: Option<String>,
+    #[serde(default)]
+    pub sof_dna: Option<String>,
+    #[serde(default)]
+    pub sof_fation_name: Option<String>,
+    #[serde(default)]
+    pub sof_hull_name: Option<String>,
+    #[serde(default)]
+    pub sof_race_name: Option<String>,
+}
+
+/// A moon.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiMoon {
+    pub moon_id: i32,
+    pub name: String,
+    pub system_id: i32,
+    #[serde(default)]
+    pub position: Option<EsiPosition>,
+}
+
+/// A planet (universe data, not PI).
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiPlanet {
+    pub planet_id: i32,
+    pub name: String,
+    pub system_id: i32,
+    pub type_id: i32,
+    #[serde(default)]
+    pub position: Option<EsiPosition>,
+}
+
+/// A race.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiRace {
+    pub race_id: i32,
+    pub name: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub alliance_id: Option<i64>,
+}
+
+/// A PI schematic.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiSchematic {
+    pub schematic_id: i32,
+    pub schematic_name: String,
+    pub cycle_time: i32,
+}
+
+/// A star.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiStar {
+    pub name: String,
+    pub solar_system_id: i32,
+    pub type_id: i32,
+    pub age: i64,
+    pub luminosity: f64,
+    pub radius: i64,
+    pub spectral_class: String,
+    pub temperature: i32,
+}
+
+/// System jump statistics.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiSystemJumps {
+    pub system_id: i32,
+    pub ship_jumps: i32,
+}
+
+/// System kill statistics.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiSystemKills {
+    pub system_id: i32,
+    #[serde(default)]
+    pub npc_kills: i32,
+    #[serde(default)]
+    pub pod_kills: i32,
+    #[serde(default)]
+    pub ship_kills: i32,
+}
+
+// ---------------------------------------------------------------------------
 // ETag cache
 // ---------------------------------------------------------------------------
 
@@ -2095,6 +2771,23 @@ impl EsiClient {
     pub async fn request_delete(&self, url: &str) -> Result<reqwest::Response> {
         self.execute_request(url, |client, url| client.delete(url))
             .await
+    }
+
+    /// Make a rate-limited PUT request with a JSON body.
+    pub async fn request_put(
+        &self,
+        url: &str,
+        body: &(impl Serialize + ?Sized),
+    ) -> Result<reqwest::Response> {
+        let body_bytes = serde_json::to_vec(body)
+            .map_err(|e| EsiError::Internal(format!("failed to serialize body: {}", e)))?;
+        self.execute_request(url, move |client, url| {
+            client
+                .put(url)
+                .header("content-type", "application/json")
+                .body(body_bytes.clone())
+        })
+        .await
     }
 }
 

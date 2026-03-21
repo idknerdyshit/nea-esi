@@ -353,7 +353,7 @@ async fn test_character_calendar() {
         .await;
 
     let client = EsiClient::new().with_base_url(server.uri());
-    let events = client.character_calendar(91234567).await.unwrap();
+    let events = client.character_calendar(91234567, None).await.unwrap();
 
     assert_eq!(events.len(), 1);
     assert_eq!(events[0].title, "Fleet Op");
@@ -486,7 +486,7 @@ async fn test_character_mail() {
         .await;
 
     let client = EsiClient::new().with_base_url(server.uri());
-    let mail = client.character_mail(91234567).await.unwrap();
+    let mail = client.character_mail(91234567, None).await.unwrap();
 
     assert_eq!(mail.len(), 1);
     assert_eq!(mail[0].mail_id, 123456);
@@ -695,7 +695,7 @@ async fn test_character_industry_jobs() {
         .await;
 
     let client = EsiClient::new().with_base_url(server.uri());
-    let jobs = client.character_industry_jobs(91234567).await.unwrap();
+    let jobs = client.character_industry_jobs(91234567, false).await.unwrap();
 
     assert_eq!(jobs.len(), 1);
     assert_eq!(jobs[0].job_id, 123);
@@ -948,7 +948,7 @@ async fn test_wallet_transactions() {
         .await;
 
     let client = EsiClient::new().with_base_url(server.uri());
-    let txns = client.wallet_transactions(91234567).await.unwrap();
+    let txns = client.wallet_transactions(91234567, None).await.unwrap();
 
     assert_eq!(txns.len(), 1);
     assert_eq!(txns[0].transaction_id, 5678901234);
@@ -1074,7 +1074,7 @@ async fn test_corp_wallet_transactions() {
         .await;
 
     let client = EsiClient::new().with_base_url(server.uri());
-    let txns = client.corp_wallet_transactions(98000001, 1).await.unwrap();
+    let txns = client.corp_wallet_transactions(98000001, 1, None).await.unwrap();
 
     assert_eq!(txns.len(), 1);
     assert_eq!(txns[0].transaction_id, 1234567890);
@@ -1210,7 +1210,7 @@ async fn test_corp_industry_jobs() {
         .await;
 
     let client = EsiClient::new().with_base_url(server.uri());
-    let jobs = client.corp_industry_jobs(98000001).await.unwrap();
+    let jobs = client.corp_industry_jobs(98000001, false).await.unwrap();
 
     assert_eq!(jobs.len(), 1);
     assert_eq!(jobs[0].job_id, 456);
@@ -2082,7 +2082,7 @@ async fn test_get_route_basic() {
         .await;
 
     let client = EsiClient::new().with_base_url(server.uri());
-    let route = client.get_route(30000142, 30002187, None, &[]).await.unwrap();
+    let route = client.get_route(30000142, 30002187, None, &[], None).await.unwrap();
     assert_eq!(route, vec![30000142, 30000144, 30002187]);
 }
 
@@ -2107,7 +2107,7 @@ async fn test_get_route_with_options() {
 
     let client = EsiClient::new().with_base_url(server.uri());
     let route = client
-        .get_route(30000142, 30002187, Some("secure"), &[30000144])
+        .get_route(30000142, 30002187, Some("secure"), &[30000144], None)
         .await
         .unwrap();
     assert_eq!(route, vec![30000142, 30000145, 30002187]);
