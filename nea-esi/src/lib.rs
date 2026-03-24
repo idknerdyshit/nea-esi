@@ -76,7 +76,7 @@ pub type Result<T> = std::result::Result<T, EsiError>;
 // Response types
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiMarketHistoryEntry {
     pub date: NaiveDate,
     pub average: f64,
@@ -90,7 +90,7 @@ pub struct EsiMarketHistoryEntry {
 // Killmail types
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiKillmail {
     pub killmail_id: i64,
     pub killmail_time: DateTime<Utc>,
@@ -100,7 +100,7 @@ pub struct EsiKillmail {
     pub attackers: Vec<EsiKillmailAttacker>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiKillmailAttacker {
     #[serde(default)]
     pub character_id: Option<i64>,
@@ -114,7 +114,7 @@ pub struct EsiKillmailAttacker {
     pub final_blow: bool,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCharacterInfo {
     pub name: String,
     #[serde(default)]
@@ -123,7 +123,7 @@ pub struct EsiCharacterInfo {
     pub alliance_id: Option<i64>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorporationInfo {
     pub name: String,
     #[serde(default)]
@@ -132,14 +132,14 @@ pub struct EsiCorporationInfo {
     pub member_count: Option<i32>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiAllianceInfo {
     pub name: String,
     #[serde(default)]
     pub ticker: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiKillmailVictim {
     pub ship_type_id: i32,
     #[serde(default)]
@@ -152,7 +152,7 @@ pub struct EsiKillmailVictim {
     pub items: Vec<EsiKillmailItem>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiKillmailItem {
     pub item_type_id: i32,
     #[serde(default)]
@@ -163,7 +163,7 @@ pub struct EsiKillmailItem {
     pub singleton: i32,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiMarketOrder {
     pub order_id: i64,
     pub type_id: i32,
@@ -178,7 +178,7 @@ pub struct EsiMarketOrder {
 }
 
 /// A single item in a character's asset list.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiAssetItem {
     pub item_id: i64,
     pub type_id: i32,
@@ -193,7 +193,7 @@ pub struct EsiAssetItem {
 }
 
 /// Resolved name from POST /universe/names/.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiResolvedName {
     pub id: i64,
     pub name: String,
@@ -201,7 +201,7 @@ pub struct EsiResolvedName {
 }
 
 /// Player-owned structure info.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiStructureInfo {
     pub name: String,
     pub owner_id: i64,
@@ -211,7 +211,7 @@ pub struct EsiStructureInfo {
 }
 
 /// Global average/adjusted price for a type.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiMarketPrice {
     pub type_id: i32,
     #[serde(default)]
@@ -225,7 +225,7 @@ pub struct EsiMarketPrice {
 // ---------------------------------------------------------------------------
 
 /// Detailed information about an inventory type.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiTypeInfo {
     pub type_id: i32,
     pub name: String,
@@ -252,7 +252,7 @@ pub struct EsiTypeInfo {
 }
 
 /// Inventory group info.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiGroupInfo {
     pub group_id: i32,
     pub name: String,
@@ -263,7 +263,7 @@ pub struct EsiGroupInfo {
 }
 
 /// Inventory category info.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCategoryInfo {
     pub category_id: i32,
     pub name: String,
@@ -273,7 +273,7 @@ pub struct EsiCategoryInfo {
 }
 
 /// Solar system info.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiSolarSystemInfo {
     pub system_id: i32,
     pub name: String,
@@ -292,7 +292,7 @@ pub struct EsiSolarSystemInfo {
 }
 
 /// A planet within a solar system.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiSystemPlanet {
     pub planet_id: i32,
     #[serde(default)]
@@ -302,7 +302,7 @@ pub struct EsiSystemPlanet {
 }
 
 /// Constellation info.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiConstellationInfo {
     pub constellation_id: i32,
     pub name: String,
@@ -312,7 +312,7 @@ pub struct EsiConstellationInfo {
 }
 
 /// Region info.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiRegionInfo {
     pub region_id: i32,
     pub name: String,
@@ -323,7 +323,7 @@ pub struct EsiRegionInfo {
 }
 
 /// NPC station info.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiStationInfo {
     pub station_id: i32,
     pub name: String,
@@ -342,7 +342,7 @@ pub struct EsiStationInfo {
 }
 
 /// Stargate info.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiStargateInfo {
     pub stargate_id: i32,
     pub name: String,
@@ -353,14 +353,14 @@ pub struct EsiStargateInfo {
 }
 
 /// Stargate destination.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiStargateDestination {
     pub stargate_id: i32,
     pub system_id: i32,
 }
 
 /// Result of POST /universe/ids/ — names resolved to IDs.
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EsiResolvedIds {
     #[serde(default)]
     pub characters: Vec<EsiIdEntry>,
@@ -401,7 +401,7 @@ impl EsiResolvedIds {
 }
 
 /// A single resolved ID + name entry.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiIdEntry {
     pub id: i64,
     pub name: String,
@@ -412,7 +412,7 @@ pub struct EsiIdEntry {
 // ---------------------------------------------------------------------------
 
 /// Market group info.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiMarketGroupInfo {
     pub market_group_id: i32,
     pub name: String,
@@ -429,7 +429,7 @@ pub struct EsiMarketGroupInfo {
 // ---------------------------------------------------------------------------
 
 /// Result of GET /search/.
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EsiSearchResult {
     #[serde(default)]
     pub character: Vec<i64>,
@@ -458,7 +458,7 @@ pub struct EsiSearchResult {
 // ---------------------------------------------------------------------------
 
 /// A killmail reference (ID + hash) from a character/corporation killmail listing.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiKillmailRef {
     pub killmail_id: i64,
     pub killmail_hash: String,
@@ -469,7 +469,7 @@ pub struct EsiKillmailRef {
 // ---------------------------------------------------------------------------
 
 /// Sovereignty map entry — who owns each system.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiSovereigntyMap {
     pub system_id: i32,
     #[serde(default)]
@@ -481,7 +481,7 @@ pub struct EsiSovereigntyMap {
 }
 
 /// Active sovereignty campaign.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiSovereigntyCampaign {
     pub campaign_id: i32,
     pub solar_system_id: i32,
@@ -497,7 +497,7 @@ pub struct EsiSovereigntyCampaign {
 }
 
 /// Sovereignty structure.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiSovereigntyStructure {
     #[serde(default)]
     pub alliance_id: Option<i64>,
@@ -517,7 +517,7 @@ pub struct EsiSovereigntyStructure {
 // ---------------------------------------------------------------------------
 
 /// An active incursion.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiIncursion {
     pub constellation_id: i32,
     #[serde(rename = "type", default)]
@@ -541,7 +541,7 @@ pub struct EsiIncursion {
 // ---------------------------------------------------------------------------
 
 /// Server status.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiServerStatus {
     pub players: i32,
     #[serde(default)]
@@ -557,7 +557,7 @@ pub struct EsiServerStatus {
 // ---------------------------------------------------------------------------
 
 /// A single wallet journal entry.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiWalletJournalEntry {
     pub id: i64,
     pub date: DateTime<Utc>,
@@ -585,7 +585,7 @@ pub struct EsiWalletJournalEntry {
 }
 
 /// A single wallet transaction.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiWalletTransaction {
     pub transaction_id: i64,
     pub date: DateTime<Utc>,
@@ -604,7 +604,7 @@ pub struct EsiWalletTransaction {
 // ---------------------------------------------------------------------------
 
 /// Character skills overview.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiSkills {
     #[serde(default)]
     pub skills: Vec<EsiSkill>,
@@ -614,7 +614,7 @@ pub struct EsiSkills {
 }
 
 /// A single trained skill.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiSkill {
     pub skill_id: i32,
     pub trained_skill_level: i32,
@@ -623,7 +623,7 @@ pub struct EsiSkill {
 }
 
 /// A skill queue entry.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiSkillqueueEntry {
     pub skill_id: i32,
     pub finish_level: i32,
@@ -641,7 +641,7 @@ pub struct EsiSkillqueueEntry {
 }
 
 /// Character attributes.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiAttributes {
     pub intelligence: i32,
     pub memory: i32,
@@ -661,7 +661,7 @@ pub struct EsiAttributes {
 // ---------------------------------------------------------------------------
 
 /// A character industry job.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiIndustryJob {
     pub job_id: i32,
     pub installer_id: i64,
@@ -697,7 +697,7 @@ pub struct EsiIndustryJob {
 }
 
 /// A character blueprint.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiBlueprint {
     pub item_id: i64,
     pub type_id: i32,
@@ -714,7 +714,7 @@ pub struct EsiBlueprint {
 // ---------------------------------------------------------------------------
 
 /// A character contract.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiContract {
     pub contract_id: i64,
     pub issuer_id: i64,
@@ -755,7 +755,7 @@ pub struct EsiContract {
 }
 
 /// An item in a contract.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiContractItem {
     pub record_id: i64,
     pub type_id: i32,
@@ -768,7 +768,7 @@ pub struct EsiContractItem {
 }
 
 /// A bid on an auction contract.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiContractBid {
     pub bid_id: i64,
     pub bidder_id: i64,
@@ -781,7 +781,7 @@ pub struct EsiContractBid {
 // ---------------------------------------------------------------------------
 
 /// A character market order.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCharacterOrder {
     pub order_id: i64,
     pub type_id: i32,
@@ -808,7 +808,7 @@ pub struct EsiCharacterOrder {
 // ---------------------------------------------------------------------------
 
 /// A saved ship fitting.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiFitting {
     pub fitting_id: i64,
     pub name: String,
@@ -836,7 +836,7 @@ pub struct EsiNewFitting {
 }
 
 /// Response from creating a fitting.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiNewFittingResponse {
     pub fitting_id: i64,
 }
@@ -846,7 +846,7 @@ pub struct EsiNewFittingResponse {
 // ---------------------------------------------------------------------------
 
 /// A character's current location.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiLocation {
     pub solar_system_id: i32,
     #[serde(default)]
@@ -856,7 +856,7 @@ pub struct EsiLocation {
 }
 
 /// A character's current ship.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiShip {
     pub ship_type_id: i32,
     pub ship_item_id: i64,
@@ -864,7 +864,7 @@ pub struct EsiShip {
 }
 
 /// A character's online status.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiOnlineStatus {
     pub online: bool,
     #[serde(default)]
@@ -880,7 +880,7 @@ pub struct EsiOnlineStatus {
 // ---------------------------------------------------------------------------
 
 /// A mail header from a character's inbox.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiMailHeader {
     pub mail_id: i64,
     pub timestamp: DateTime<Utc>,
@@ -904,7 +904,7 @@ pub struct EsiMailRecipient {
 }
 
 /// A mail body.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiMailBody {
     #[serde(default)]
     pub body: Option<String>,
@@ -933,7 +933,7 @@ pub struct EsiNewMail {
 }
 
 /// Character mail labels.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiMailLabels {
     pub total_unread_count: i32,
     #[serde(default)]
@@ -941,7 +941,7 @@ pub struct EsiMailLabels {
 }
 
 /// A single mail label.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiMailLabel {
     pub label_id: i32,
     pub name: String,
@@ -956,7 +956,7 @@ pub struct EsiMailLabel {
 // ---------------------------------------------------------------------------
 
 /// A character notification.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiNotification {
     pub notification_id: i64,
     #[serde(rename = "type")]
@@ -975,7 +975,7 @@ pub struct EsiNotification {
 // ---------------------------------------------------------------------------
 
 /// A character contact.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiContact {
     pub contact_id: i64,
     pub contact_type: String,
@@ -987,7 +987,7 @@ pub struct EsiContact {
 }
 
 /// A contact label.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiContactLabel {
     pub label_id: i64,
     pub label_name: String,
@@ -998,7 +998,7 @@ pub struct EsiContactLabel {
 // ---------------------------------------------------------------------------
 
 /// A personal bookmark.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiBookmark {
     pub bookmark_id: i64,
     pub created: DateTime<Utc>,
@@ -1017,14 +1017,14 @@ pub struct EsiBookmark {
 }
 
 /// An item referenced by a bookmark.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiBookmarkItem {
     pub item_id: i64,
     pub type_id: i32,
 }
 
 /// Bookmark coordinates in space.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiBookmarkCoordinates {
     pub x: f64,
     pub y: f64,
@@ -1032,7 +1032,7 @@ pub struct EsiBookmarkCoordinates {
 }
 
 /// A bookmark folder.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiBookmarkFolder {
     pub folder_id: i32,
     pub name: String,
@@ -1043,7 +1043,7 @@ pub struct EsiBookmarkFolder {
 // ---------------------------------------------------------------------------
 
 /// A calendar event summary.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCalendarEvent {
     pub event_id: i64,
     pub event_date: DateTime<Utc>,
@@ -1055,7 +1055,7 @@ pub struct EsiCalendarEvent {
 }
 
 /// A calendar event detail.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCalendarEventDetail {
     pub event_id: i64,
     pub date: DateTime<Utc>,
@@ -1077,7 +1077,7 @@ pub struct EsiCalendarEventDetail {
 // ---------------------------------------------------------------------------
 
 /// Character clones info.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiClones {
     #[serde(default)]
     pub home_location: Option<EsiCloneLocation>,
@@ -1090,14 +1090,14 @@ pub struct EsiClones {
 }
 
 /// A clone home location.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCloneLocation {
     pub location_id: i64,
     pub location_type: String,
 }
 
 /// A jump clone.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiJumpClone {
     pub jump_clone_id: i64,
     pub location_id: i64,
@@ -1113,14 +1113,14 @@ pub struct EsiJumpClone {
 // ---------------------------------------------------------------------------
 
 /// LP balance with a corporation.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiLoyaltyPoints {
     pub corporation_id: i64,
     pub loyalty_points: i32,
 }
 
 /// An LP store offer.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiLoyaltyStoreOffer {
     pub offer_id: i32,
     pub type_id: i32,
@@ -1134,7 +1134,7 @@ pub struct EsiLoyaltyStoreOffer {
 }
 
 /// A required item for an LP store offer.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiLoyaltyRequiredItem {
     pub type_id: i32,
     pub quantity: i32,
@@ -1145,7 +1145,7 @@ pub struct EsiLoyaltyRequiredItem {
 // ---------------------------------------------------------------------------
 
 /// A planetary colony summary.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiPlanetSummary {
     pub solar_system_id: i32,
     pub planet_id: i32,
@@ -1159,7 +1159,7 @@ pub struct EsiPlanetSummary {
 
 /// Detailed planetary colony layout. Uses `serde_json::Value` for complex
 /// nested PI structures; typed access is deferred to a future release.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiPlanetDetail {
     #[serde(default)]
     pub links: Vec<serde_json::Value>,
@@ -1174,28 +1174,28 @@ pub struct EsiPlanetDetail {
 // ---------------------------------------------------------------------------
 
 /// A corporation wallet division balance.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorpWalletDivision {
     pub division: i32,
     pub balance: f64,
 }
 
 /// An asset name (from POST /corporations/{}/assets/names/).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiAssetName {
     pub item_id: i64,
     pub name: String,
 }
 
 /// An asset location (from POST /corporations/{}/assets/locations/).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiAssetLocation {
     pub item_id: i64,
     pub position: EsiBookmarkCoordinates,
 }
 
 /// Corporation member titles.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorpMemberTitle {
     pub character_id: i64,
     #[serde(default)]
@@ -1203,7 +1203,7 @@ pub struct EsiCorpMemberTitle {
 }
 
 /// Corporation member roles.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorpMemberRole {
     pub character_id: i64,
     #[serde(default)]
@@ -1217,7 +1217,7 @@ pub struct EsiCorpMemberRole {
 }
 
 /// Corporation member tracking info.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorpMemberTracking {
     pub character_id: i64,
     #[serde(default)]
@@ -1233,7 +1233,7 @@ pub struct EsiCorpMemberTracking {
 }
 
 /// A corporation-owned structure.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorpStructure {
     pub structure_id: i64,
     pub corporation_id: i64,
@@ -1259,14 +1259,14 @@ pub struct EsiCorpStructure {
 }
 
 /// A service running on a corporation structure.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorpStructureService {
     pub name: String,
     pub state: String,
 }
 
 /// A corporation starbase (POS).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorpStarbase {
     pub starbase_id: i64,
     pub system_id: i32,
@@ -1283,7 +1283,7 @@ pub struct EsiCorpStarbase {
 }
 
 /// Detailed configuration of a corporation starbase (POS).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorpStarbaseDetail {
     pub state: String,
     #[serde(default)]
@@ -1317,7 +1317,7 @@ pub struct EsiCorpStarbaseDetail {
 }
 
 /// A fuel entry for a starbase.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiStarbaseFuel {
     pub type_id: i32,
     pub quantity: i32,
@@ -1329,7 +1329,7 @@ pub struct EsiStarbaseFuel {
 
 // Dogma types
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiDogmaAttribute {
     pub attribute_id: i32,
     pub name: String,
@@ -1350,7 +1350,7 @@ pub struct EsiDogmaAttribute {
     pub high_is_good: bool,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiDogmaEffect {
     pub effect_id: i32,
     pub name: String,
@@ -1387,7 +1387,7 @@ pub struct EsiDogmaEffect {
     pub modifiers: Vec<EsiDogmaModifier>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiDogmaModifier {
     #[serde(default)]
     pub domain: Option<String>,
@@ -1403,7 +1403,7 @@ pub struct EsiDogmaModifier {
     pub operator: Option<i32>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiDynamicItem {
     pub created_by: i64,
     pub mutator_type_id: i32,
@@ -1414,13 +1414,13 @@ pub struct EsiDynamicItem {
     pub dogma_effects: Vec<EsiDogmaEffectRef>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiDogmaAttributeValue {
     pub attribute_id: i32,
     pub value: f64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiDogmaEffectRef {
     pub effect_id: i32,
     pub is_default: bool,
@@ -1428,7 +1428,7 @@ pub struct EsiDogmaEffectRef {
 
 // Opportunities types
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCompletedOpportunity {
     pub opportunity_id: i32,
     pub completed_at: DateTime<Utc>,
@@ -1436,7 +1436,7 @@ pub struct EsiCompletedOpportunity {
 
 // Fleet types
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCharacterFleet {
     pub fleet_id: i64,
     pub role: String,
@@ -1444,7 +1444,7 @@ pub struct EsiCharacterFleet {
     pub wing_id: i64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiFleetInfo {
     pub fleet_id: i64,
     #[serde(default)]
@@ -1457,7 +1457,7 @@ pub struct EsiFleetInfo {
     pub motd: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiFleetMember {
     pub character_id: i64,
     pub join_time: DateTime<Utc>,
@@ -1472,7 +1472,7 @@ pub struct EsiFleetMember {
     pub station_id: Option<i64>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiFleetWing {
     pub id: i64,
     pub name: String,
@@ -1480,7 +1480,7 @@ pub struct EsiFleetWing {
     pub squads: Vec<EsiFleetSquad>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiFleetSquad {
     pub id: i64,
     pub name: String,
@@ -1488,7 +1488,7 @@ pub struct EsiFleetSquad {
 
 // War types
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiWar {
     pub id: i32,
     pub declared: DateTime<Utc>,
@@ -1506,7 +1506,7 @@ pub struct EsiWar {
     pub allies: Vec<EsiWarAlly>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiWarParty {
     pub isk_destroyed: f64,
     pub ships_killed: i32,
@@ -1516,7 +1516,7 @@ pub struct EsiWarParty {
     pub corporation_id: Option<i64>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiWarAlly {
     #[serde(default)]
     pub alliance_id: Option<i64>,
@@ -1526,7 +1526,7 @@ pub struct EsiWarAlly {
 
 // Faction Warfare types
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiFwFactionStats {
     pub faction_id: i32,
     pub pilots: i32,
@@ -1535,14 +1535,14 @@ pub struct EsiFwFactionStats {
     pub victory_points: EsiFwTotals,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiFwTotals {
     pub last_week: i32,
     pub total: i32,
     pub yesterday: i32,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiFwSystem {
     pub solar_system_id: i32,
     pub contested: String,
@@ -1552,13 +1552,13 @@ pub struct EsiFwSystem {
     pub victory_points_threshold: i32,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiFwLeaderboards {
     pub kills: EsiFwLeaderboardCategory,
     pub victory_points: EsiFwLeaderboardCategory,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiFwLeaderboardCategory {
     #[serde(default)]
     pub active_total: Vec<EsiFwLeaderboardEntry>,
@@ -1568,13 +1568,13 @@ pub struct EsiFwLeaderboardCategory {
     pub yesterday: Vec<EsiFwLeaderboardEntry>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiFwLeaderboardEntry {
     pub amount: i32,
     pub id: i32,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiFwWar {
     pub against_id: i32,
     pub faction_id: i32,
@@ -1582,14 +1582,14 @@ pub struct EsiFwWar {
 
 // Insurance types
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiInsurancePrice {
     pub type_id: i32,
     #[serde(default)]
     pub levels: Vec<EsiInsuranceLevel>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiInsuranceLevel {
     pub cost: f64,
     pub name: String,
@@ -1598,7 +1598,7 @@ pub struct EsiInsuranceLevel {
 
 // History types
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiAllianceHistoryEntry {
     pub record_id: i32,
     pub start_date: DateTime<Utc>,
@@ -1608,7 +1608,7 @@ pub struct EsiAllianceHistoryEntry {
     pub is_deleted: bool,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorporationHistoryEntry {
     pub record_id: i32,
     pub start_date: DateTime<Utc>,
@@ -1624,7 +1624,7 @@ pub struct EsiCorporationHistoryEntry {
 // Alliance types
 
 /// Alliance icon URLs.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiAllianceIcons {
     #[serde(default)]
     pub px64: Option<String>,
@@ -1635,7 +1635,7 @@ pub struct EsiAllianceIcons {
 // Character info & history types
 
 /// Character affiliation (corporation, alliance, faction).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCharacterAffiliation {
     pub character_id: i64,
     pub corporation_id: i64,
@@ -1646,7 +1646,7 @@ pub struct EsiCharacterAffiliation {
 }
 
 /// Character portrait URLs.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCharacterPortrait {
     #[serde(default)]
     pub px64: Option<String>,
@@ -1659,7 +1659,7 @@ pub struct EsiCharacterPortrait {
 }
 
 /// Character roles.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCharacterRoles {
     #[serde(default)]
     pub roles: Vec<String>,
@@ -1672,7 +1672,7 @@ pub struct EsiCharacterRoles {
 }
 
 /// A character title.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCharacterTitle {
     pub title_id: i32,
     #[serde(default)]
@@ -1680,7 +1680,7 @@ pub struct EsiCharacterTitle {
 }
 
 /// A standing entry.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiStanding {
     pub from_id: i64,
     pub from_type: String,
@@ -1688,7 +1688,7 @@ pub struct EsiStanding {
 }
 
 /// A character medal.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCharacterMedal {
     pub medal_id: i32,
     pub title: String,
@@ -1703,7 +1703,7 @@ pub struct EsiCharacterMedal {
 }
 
 /// A medal graphic layer.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiMedalGraphic {
     pub part: i32,
     pub layer: i32,
@@ -1714,7 +1714,7 @@ pub struct EsiMedalGraphic {
 }
 
 /// Agent research info.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiAgentResearch {
     pub agent_id: i64,
     pub skill_type_id: i32,
@@ -1724,7 +1724,7 @@ pub struct EsiAgentResearch {
 }
 
 /// Jump fatigue info.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiFatigue {
     #[serde(default)]
     pub last_jump_date: Option<DateTime<Utc>>,
@@ -1735,7 +1735,7 @@ pub struct EsiFatigue {
 }
 
 /// Character FW stats.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCharacterFwStats {
     #[serde(default)]
     pub faction_id: Option<i32>,
@@ -1754,7 +1754,7 @@ pub struct EsiCharacterFwStats {
 // Calendar write types
 
 /// A calendar event attendee.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiEventAttendee {
     pub character_id: i64,
     #[serde(default)]
@@ -1778,7 +1778,7 @@ pub struct EsiNewMailLabel {
 }
 
 /// A mailing list.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiMailingList {
     pub mailing_list_id: i64,
     pub name: String,
@@ -1796,7 +1796,7 @@ pub struct EsiMailUpdate {
 // Mining types
 
 /// A personal mining ledger entry.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiMiningEntry {
     pub date: NaiveDate,
     pub solar_system_id: i32,
@@ -1805,7 +1805,7 @@ pub struct EsiMiningEntry {
 }
 
 /// A contact notification.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiContactNotification {
     pub notification_id: i64,
     pub sender_character_id: i64,
@@ -1820,7 +1820,7 @@ pub struct EsiContactNotification {
 // Corporation additional types
 
 /// Corporation container audit log entry.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiContainerLog {
     pub logged_at: DateTime<Utc>,
     pub container_id: i64,
@@ -1842,7 +1842,7 @@ pub struct EsiContainerLog {
 }
 
 /// A customs office (POCO).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCustomsOffice {
     pub office_id: i64,
     pub system_id: i32,
@@ -1873,7 +1873,7 @@ pub struct EsiCustomsOffice {
 }
 
 /// Corporation divisions.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorpDivisions {
     #[serde(default)]
     pub hangar: Vec<EsiCorpDivision>,
@@ -1882,7 +1882,7 @@ pub struct EsiCorpDivisions {
 }
 
 /// A single division entry.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorpDivision {
     pub division: i32,
     #[serde(default)]
@@ -1890,7 +1890,7 @@ pub struct EsiCorpDivision {
 }
 
 /// A corporation facility.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorpFacility {
     pub facility_id: i64,
     pub system_id: i32,
@@ -1898,7 +1898,7 @@ pub struct EsiCorpFacility {
 }
 
 /// Corporation FW stats.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorpFwStats {
     #[serde(default)]
     pub faction_id: Option<i32>,
@@ -1913,7 +1913,7 @@ pub struct EsiCorpFwStats {
 }
 
 /// Corporation icon URLs.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorpIcons {
     #[serde(default)]
     pub px64: Option<String>,
@@ -1924,7 +1924,7 @@ pub struct EsiCorpIcons {
 }
 
 /// A corporation medal.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorpMedal {
     pub medal_id: i32,
     pub title: String,
@@ -1934,7 +1934,7 @@ pub struct EsiCorpMedal {
 }
 
 /// An issued medal.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiIssuedMedal {
     pub medal_id: i32,
     pub character_id: i64,
@@ -1945,7 +1945,7 @@ pub struct EsiIssuedMedal {
 }
 
 /// A role change history entry.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiRoleHistory {
     pub character_id: i64,
     pub changed_at: DateTime<Utc>,
@@ -1958,7 +1958,7 @@ pub struct EsiRoleHistory {
 }
 
 /// A shareholder entry.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiShareholder {
     pub shareholder_id: i64,
     pub shareholder_type: String,
@@ -1966,7 +1966,7 @@ pub struct EsiShareholder {
 }
 
 /// A corporation title.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorpTitle {
     pub title_id: i32,
     #[serde(default)]
@@ -1992,7 +1992,7 @@ pub struct EsiCorpTitle {
 // Corporation mining types
 
 /// A moon mining extraction.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiMiningExtraction {
     pub structure_id: i64,
     pub moon_id: i32,
@@ -2002,7 +2002,7 @@ pub struct EsiMiningExtraction {
 }
 
 /// A mining observer.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiMiningObserver {
     pub observer_id: i64,
     pub observer_type: String,
@@ -2010,7 +2010,7 @@ pub struct EsiMiningObserver {
 }
 
 /// A mining observer entry (character mining at observer).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiMiningObserverEntry {
     pub character_id: i64,
     pub recorded_corporation_id: i64,
@@ -2052,13 +2052,13 @@ pub struct EsiFleetMovement {
 }
 
 /// Response from creating a fleet wing.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiFleetWingCreated {
     pub wing_id: i64,
 }
 
 /// Response from creating a fleet squad.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiFleetSquadCreated {
     pub squad_id: i64,
 }
@@ -2072,14 +2072,14 @@ pub struct EsiFleetNaming {
 // FW leaderboard types
 
 /// Character FW leaderboards.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiFwCharacterLeaderboards {
     pub kills: EsiFwLeaderboardCategory,
     pub victory_points: EsiFwLeaderboardCategory,
 }
 
 /// Corporation FW leaderboards.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiFwCorporationLeaderboards {
     pub kills: EsiFwLeaderboardCategory,
     pub victory_points: EsiFwLeaderboardCategory,
@@ -2088,7 +2088,7 @@ pub struct EsiFwCorporationLeaderboards {
 // Industry public types
 
 /// A public industry facility.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiIndustryFacility {
     pub facility_id: i64,
     pub owner_id: i64,
@@ -2100,7 +2100,7 @@ pub struct EsiIndustryFacility {
 }
 
 /// Industry system cost indices.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiIndustrySystem {
     pub solar_system_id: i32,
     #[serde(default)]
@@ -2108,7 +2108,7 @@ pub struct EsiIndustrySystem {
 }
 
 /// A cost index for an activity.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCostIndex {
     pub activity: String,
     pub cost_index: f64,
@@ -2131,7 +2131,7 @@ pub struct EsiNewMailWindow {
 // Universe additional types
 
 /// An ancestry.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiAncestry {
     pub id: i32,
     pub name: String,
@@ -2145,7 +2145,7 @@ pub struct EsiAncestry {
 }
 
 /// An asteroid belt.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiAsteroidBelt {
     pub name: String,
     pub system_id: i32,
@@ -2154,7 +2154,7 @@ pub struct EsiAsteroidBelt {
 }
 
 /// A 3D position.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiPosition {
     pub x: f64,
     pub y: f64,
@@ -2162,7 +2162,7 @@ pub struct EsiPosition {
 }
 
 /// A bloodline.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiBloodline {
     pub bloodline_id: i32,
     pub name: String,
@@ -2179,7 +2179,7 @@ pub struct EsiBloodline {
 }
 
 /// A faction.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiFaction {
     pub faction_id: i32,
     pub name: String,
@@ -2202,7 +2202,7 @@ pub struct EsiFaction {
 }
 
 /// A graphic.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiGraphic {
     pub graphic_id: i32,
     #[serde(default)]
@@ -2222,7 +2222,7 @@ pub struct EsiGraphic {
 }
 
 /// A moon.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiMoon {
     pub moon_id: i32,
     pub name: String,
@@ -2232,7 +2232,7 @@ pub struct EsiMoon {
 }
 
 /// A planet (universe data, not PI).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiPlanet {
     pub planet_id: i32,
     pub name: String,
@@ -2243,7 +2243,7 @@ pub struct EsiPlanet {
 }
 
 /// A race.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiRace {
     pub race_id: i32,
     pub name: String,
@@ -2254,7 +2254,7 @@ pub struct EsiRace {
 }
 
 /// A PI schematic.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiSchematic {
     pub schematic_id: i32,
     pub schematic_name: String,
@@ -2262,7 +2262,7 @@ pub struct EsiSchematic {
 }
 
 /// A star.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiStar {
     pub name: String,
     pub solar_system_id: i32,
@@ -2275,14 +2275,14 @@ pub struct EsiStar {
 }
 
 /// System jump statistics.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiSystemJumps {
     pub system_id: i32,
     pub ship_jumps: i32,
 }
 
 /// System kill statistics.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiSystemKills {
     pub system_id: i32,
     #[serde(default)]
