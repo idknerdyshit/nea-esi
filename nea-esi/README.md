@@ -242,11 +242,9 @@ client.character_contacts(character_id: i64) -> Vec<EsiContact>  // paginated
 client.character_contact_labels(character_id: i64) -> Vec<EsiContactLabel>
 ```
 
-**Character — Bookmarks & Calendar:**
+**Character — Calendar:**
 
 ```rust
-client.character_bookmarks(character_id: i64) -> Vec<EsiBookmark>  // paginated
-client.character_bookmark_folders(character_id: i64) -> Vec<EsiBookmarkFolder>
 client.character_calendar(character_id: i64) -> Vec<EsiCalendarEvent>
 client.character_calendar_event(character_id: i64, event_id: i64) -> EsiCalendarEventDetail
 ```
@@ -516,10 +514,6 @@ client.clear_cache().await
 
 **`EsiContactLabel`** — `label_id: i64`, `label_name: String`
 
-**`EsiBookmark`** — `bookmark_id: i64`, `created: DateTime<Utc>`, `location_id: i32`, `creator_id: i64`, optional: `label`, `notes`, `folder_id`, `item`, `coordinates`
-
-**`EsiBookmarkFolder`** — `folder_id: i32`, `name: String`
-
 **`EsiCalendarEvent`** — `event_id: i64`, `event_date: DateTime<Utc>`, `title: String`, optional: `importance`, `event_response`
 
 **`EsiCalendarEventDetail`** — `event_id: i64`, `date: DateTime<Utc>`, `title: String`, `owner_id: i64`, `owner_name: String`, `owner_type: String`, `duration: i32`, optional: `text`, `importance`, `response`
@@ -540,7 +534,7 @@ client.clear_cache().await
 
 **`EsiAssetName`** — `item_id: i64`, `name: String`
 
-**`EsiAssetLocation`** — `item_id: i64`, `position: EsiBookmarkCoordinates`
+**`EsiAssetLocation`** — `item_id: i64`, `position: EsiPosition`
 
 **`EsiCorpMemberTitle`** — `character_id: i64`, `titles: Vec<i32>` (default)
 
@@ -703,7 +697,6 @@ No breaking changes. 0.4.0 adds comprehensive character-level endpoint coverage:
 - **Mail**: `character_mail`, `character_mail_before`, `character_mail_body`, `send_mail`, `character_mail_labels`
 - **Notifications**: `character_notifications`
 - **Contacts**: `character_contacts`, `character_contact_labels`
-- **Bookmarks**: `character_bookmarks`, `character_bookmark_folders`
 - **Calendar**: `character_calendar`, `character_calendar_event`
 - **Clones**: `character_clones`, `character_implants`
 - **Loyalty**: `character_loyalty_points`, `loyalty_store_offers`

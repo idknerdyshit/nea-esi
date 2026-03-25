@@ -25,7 +25,7 @@ pub async fn execute(ctx: &super::ExecContext, cmd: AuthCommand) -> anyhow::Resu
             all_scopes,
             headless,
         } => {
-            let config = crate::config::Config::load(None)?;
+            let config = crate::config::Config::load(ctx.config_path.as_ref())?;
             let opts = crate::auth::LoginOptions {
                 scopes: if scopes.is_empty() {
                     None

@@ -112,7 +112,7 @@ fn format_cell(value: Option<&serde_json::Value>) -> String {
             // For nested objects/arrays, compact JSON
             let s = serde_json::to_string(v).unwrap_or_default();
             if s.len() > 60 {
-                format!("{}...", &s[..57])
+                format!("{}...", &s[..s.floor_char_boundary(57)])
             } else {
                 s
             }

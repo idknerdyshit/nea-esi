@@ -299,40 +299,6 @@ async fn test_market_prices() {
 }
 
 // ---------------------------------------------------------------------------
-// character_bookmarks — paginated GET
-// ---------------------------------------------------------------------------
-
-#[tokio::test]
-async fn test_character_bookmarks() {
-    let server = MockServer::start().await;
-
-    let body = serde_json::json!([{
-        "bookmark_id": 12345,
-        "created": "2026-03-15T10:00:00Z",
-        "location_id": 30000142,
-        "creator_id": 91234567,
-        "label": "Home"
-    }]);
-
-    Mock::given(method("GET"))
-        .and(path("/characters/91234567/bookmarks/"))
-        .and(query_param("page", "1"))
-        .respond_with(
-            ResponseTemplate::new(200)
-                .set_body_json(&body)
-                .insert_header("x-pages", "1"),
-        )
-        .mount(&server)
-        .await;
-
-    let client = EsiClient::new().with_base_url(server.uri());
-    let bookmarks = client.character_bookmarks(91234567).await.unwrap();
-
-    assert_eq!(bookmarks.len(), 1);
-    assert_eq!(bookmarks[0].bookmark_id, 12345);
-}
-
-// ---------------------------------------------------------------------------
 // character_calendar — simple GET
 // ---------------------------------------------------------------------------
 

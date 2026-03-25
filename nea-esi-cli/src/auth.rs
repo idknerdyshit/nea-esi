@@ -20,8 +20,7 @@ pub const DEFAULT_SCOPES: &[&str] = &[
     "esi-clones.read_clones.v1",
     "esi-clones.read_implants.v1",
     "esi-universe.read_structures.v1",
-    "esi-bookmarks.read_character_bookmarks.v1",
-    "esi-fittings.read_fittings.v1",
+"esi-fittings.read_fittings.v1",
     "esi-fleets.read_fleet.v1",
     "esi-characters.read_notifications.v1",
     "esi-industry.read_character_jobs.v1",
@@ -39,40 +38,8 @@ pub const DEFAULT_SCOPES: &[&str] = &[
     "esi-industry.read_character_mining.v1",
 ];
 
-/// All scopes including write operations.
-pub const ALL_SCOPES: &[&str] = &[
-    // All default read scopes
-    "esi-skills.read_skills.v1",
-    "esi-skills.read_skillqueue.v1",
-    "esi-wallet.read_character_wallet.v1",
-    "esi-assets.read_assets.v1",
-    "esi-characters.read_contacts.v1",
-    "esi-killmails.read_killmails.v1",
-    "esi-mail.read_mail.v1",
-    "esi-location.read_location.v1",
-    "esi-location.read_ship_type.v1",
-    "esi-location.read_online.v1",
-    "esi-clones.read_clones.v1",
-    "esi-clones.read_implants.v1",
-    "esi-universe.read_structures.v1",
-    "esi-bookmarks.read_character_bookmarks.v1",
-    "esi-fittings.read_fittings.v1",
-    "esi-fleets.read_fleet.v1",
-    "esi-characters.read_notifications.v1",
-    "esi-industry.read_character_jobs.v1",
-    "esi-contracts.read_character_contracts.v1",
-    "esi-calendar.read_calendar_events.v1",
-    "esi-characters.read_corporation_roles.v1",
-    "esi-planets.manage_planets.v1",
-    "esi-characters.read_standings.v1",
-    "esi-characters.read_loyalty.v1",
-    "esi-characters.read_fatigue.v1",
-    "esi-characters.read_medals.v1",
-    "esi-characters.read_titles.v1",
-    "esi-search.search_structures.v1",
-    "esi-corporations.read_corporation_membership.v1",
-    "esi-industry.read_character_mining.v1",
-    // Write scopes
+/// Additional write scopes beyond DEFAULT_SCOPES.
+const WRITE_SCOPES: &[&str] = &[
     "esi-mail.send_mail.v1",
     "esi-mail.organize_mail.v1",
     "esi-fittings.write_fittings.v1",
@@ -104,7 +71,7 @@ pub async fn login(
 
     // Determine scopes
     let scopes: Vec<&str> = if opts.all_scopes {
-        ALL_SCOPES.to_vec()
+        DEFAULT_SCOPES.iter().chain(WRITE_SCOPES.iter()).copied().collect()
     } else if let Some(ref custom) = opts.scopes {
         custom.iter().map(|s| s.as_str()).collect()
     } else if !config.auth.scopes.is_empty() {

@@ -1,5 +1,5 @@
 use crate::{
-    EsiBookmark, EsiBookmarkFolder, EsiCalendarEvent, EsiCalendarEventDetail, EsiCharacterOrder,
+    EsiCalendarEvent, EsiCalendarEventDetail, EsiCharacterOrder,
     EsiClient, EsiContact, EsiContactLabel, EsiContract, EsiContractBid, EsiContractItem,
     EsiError, EsiFitting, EsiMailBody, EsiMailHeader, EsiMailLabels, EsiMailUpdate, EsiMailingList,
     EsiNewFitting, EsiNewFittingResponse, EsiNewMail, EsiNewMailLabel, EsiNotification,
@@ -369,36 +369,6 @@ impl EsiClient {
                 .append_pair("contact_ids", &id.to_string());
         }
         self.delete_url(url.as_str()).await
-    }
-
-    // -----------------------------------------------------------------------
-    // Bookmark endpoints (authenticated)
-    // -----------------------------------------------------------------------
-
-    /// Fetch a character's bookmarks (paginated).
-    #[tracing::instrument(skip(self))]
-    pub async fn character_bookmarks(
-        &self,
-        character_id: i64,
-    ) -> Result<Vec<EsiBookmark>> {
-        self.get_paginated_json(&format!(
-            "/characters/{}/bookmarks/",
-            character_id
-        ))
-        .await
-    }
-
-    /// Fetch a character's bookmark folders.
-    #[tracing::instrument(skip(self))]
-    pub async fn character_bookmark_folders(
-        &self,
-        character_id: i64,
-    ) -> Result<Vec<EsiBookmarkFolder>> {
-        self.get_json(&format!(
-            "/characters/{}/bookmarks/folders/",
-            character_id
-        ))
-        .await
     }
 
     // -----------------------------------------------------------------------

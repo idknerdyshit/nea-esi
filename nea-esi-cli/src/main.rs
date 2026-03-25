@@ -48,6 +48,7 @@ async fn main() -> anyhow::Result<()> {
         format,
         character_id,
         corporation_id,
+        config_path: cli.config.clone(),
     };
 
     if matches!(cli.command, Command::Interactive) {
@@ -110,10 +111,10 @@ fn build_client(config: &config::Config) -> anyhow::Result<EsiClient> {
 
     let client = match (&config.app.client_id, &config.app.client_secret) {
         (Some(id), Some(secret)) => {
-            EsiClient::with_web_app(ua, id, SecretString::from(secret.clone()))
+            EsiClient::with_web_app(ua, id, SecretString::from(secret.clone()))?
         }
-        (Some(id), None) => EsiClient::with_native_app(ua, id),
-        _ => EsiClient::with_user_agent(ua),
+        (Some(id), None) => EsiClient::with_native_app(ua, id)?,
+        _ => EsiClient::with_user_agent(ua)?,
     };
 
     Ok(client.with_cache())

@@ -18,7 +18,7 @@ async fn test_bearer_header_present_for_authenticated_client() {
         .mount(&server)
         .await;
 
-    let client = EsiClient::with_native_app("test-agent", "test-client");
+    let client = EsiClient::with_native_app("test-agent", "test-client").unwrap();
     let tokens = EsiTokens {
         access_token: SecretString::from("my-access-token".to_string()),
         refresh_token: SecretString::from("my-refresh-token".to_string()),
@@ -55,7 +55,7 @@ async fn test_no_bearer_header_for_unauthenticated_client() {
 
 #[tokio::test]
 async fn test_set_tokens_stores_and_retrieves() {
-    let client = EsiClient::with_native_app("test-agent", "test-client");
+    let client = EsiClient::with_native_app("test-agent", "test-client").unwrap();
 
     let tokens = EsiTokens {
         access_token: SecretString::from("exchanged-access".to_string()),
@@ -139,7 +139,7 @@ async fn test_character_assets_with_auth() {
         .mount(&server)
         .await;
 
-    let client = EsiClient::with_native_app("test-agent", "test-client");
+    let client = EsiClient::with_native_app("test-agent", "test-client").unwrap();
     let tokens = EsiTokens {
         access_token: SecretString::from("asset-token".to_string()),
         refresh_token: SecretString::from("r".to_string()),
@@ -232,7 +232,7 @@ async fn test_get_structure_with_auth() {
         .mount(&server)
         .await;
 
-    let client = EsiClient::with_native_app("test-agent", "test-client");
+    let client = EsiClient::with_native_app("test-agent", "test-client").unwrap();
     let tokens = EsiTokens {
         access_token: SecretString::from("struct-token".to_string()),
         refresh_token: SecretString::from("r".to_string()),
@@ -285,4 +285,217 @@ async fn test_market_prices_no_auth() {
     assert!((prices[0].adjusted_price.unwrap() - 5.10).abs() < f64::EPSILON);
     assert_eq!(prices[1].type_id, 35);
     assert_eq!(prices[1].adjusted_price, None);
+}
+
+// ---------------------------------------------------------------------------
+// Token exchange tests (native vs web auth)
+// ---------------------------------------------------------------------------
+
+/// Helper: standard token response JSON.
+fn token_response_json() -> serde_json::Value {
+    serde_json::json!({
+        "access_token": "new-access-token",
+        "expires_in": 1199,
+        "token_type": "Bearer",
+        "refresh_token": "new-refresh-token"
+    })
+}
+
+#[tokio::test]
+async fn test_exchange_code_native_app_sends_form_body() {
+    let server = MockServer::start().await;
+    let token_url = format!("{}/v2/oauth/token", server.uri());
+
+    // Native app: form body includes client_id, NO Basic auth header.
+    Mock::given(method("POST"))
+        .and(path("/v2/oauth/token"))
+        .and(wiremock::matchers::body_string_contains("grant_type=authorization_code"))
+        .and(wiremock::matchers::body_string_contains("code=test-auth-code"))
+        .and(wiremock::matchers::body_string_contains("client_id=native-client-id"))
+        .and(wiremock::matchers::body_string_contains("code_verifier=test-verifier"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(token_response_json()))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::with_native_app("test-agent", "native-client-id")
+        .unwrap()
+        .with_sso_token_url(&token_url);
+
+    let verifier = SecretString::from("test-verifier".to_string());
+    let tokens = client
+        .exchange_code("test-auth-code", &verifier, "http://localhost/callback")
+        .await
+        .unwrap();
+
+    assert_eq!(tokens.access_token.expose_secret(), "new-access-token");
+    assert_eq!(tokens.refresh_token.expose_secret(), "new-refresh-token");
+    assert!(!tokens.is_expired());
+
+    // Verify tokens are stored on the client.
+    let stored = client.get_tokens().await.unwrap();
+    assert_eq!(stored.access_token.expose_secret(), "new-access-token");
+}
+
+#[tokio::test]
+async fn test_exchange_code_web_app_sends_basic_auth() {
+    let server = MockServer::start().await;
+    let token_url = format!("{}/v2/oauth/token", server.uri());
+
+    // Web app: sends Basic auth header with client_id:client_secret.
+    // base64("web-client-id:web-client-secret") = "d2ViLWNsaWVudC1pZDp3ZWItY2xpZW50LXNlY3JldA=="
+    Mock::given(method("POST"))
+        .and(path("/v2/oauth/token"))
+        .and(header(
+            "Authorization",
+            "Basic d2ViLWNsaWVudC1pZDp3ZWItY2xpZW50LXNlY3JldA==",
+        ))
+        .and(wiremock::matchers::body_string_contains("grant_type=authorization_code"))
+        .and(wiremock::matchers::body_string_contains("code=web-auth-code"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(token_response_json()))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::with_web_app(
+        "test-agent",
+        "web-client-id",
+        SecretString::from("web-client-secret".to_string()),
+    )
+    .unwrap()
+    .with_sso_token_url(&token_url);
+
+    let verifier = SecretString::from("test-verifier".to_string());
+    let tokens = client
+        .exchange_code("web-auth-code", &verifier, "http://localhost/callback")
+        .await
+        .unwrap();
+
+    assert_eq!(tokens.access_token.expose_secret(), "new-access-token");
+}
+
+#[tokio::test]
+async fn test_refresh_token_native_app() {
+    let server = MockServer::start().await;
+    let token_url = format!("{}/v2/oauth/token", server.uri());
+
+    // Native app refresh: form body includes grant_type, client_id, refresh_token.
+    Mock::given(method("POST"))
+        .and(path("/v2/oauth/token"))
+        .and(wiremock::matchers::body_string_contains("grant_type=refresh_token"))
+        .and(wiremock::matchers::body_string_contains("client_id=native-client-id"))
+        .and(wiremock::matchers::body_string_contains("refresh_token=old-refresh"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(token_response_json()))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::with_native_app("test-agent", "native-client-id")
+        .unwrap()
+        .with_sso_token_url(&token_url);
+
+    // Set expired tokens to trigger refresh.
+    let old_tokens = EsiTokens {
+        access_token: SecretString::from("old-access".to_string()),
+        refresh_token: SecretString::from("old-refresh".to_string()),
+        expires_at: Utc::now() - Duration::seconds(60),
+    };
+    client.set_tokens(old_tokens).await;
+
+    let refreshed = client.refresh_token().await.unwrap();
+    assert_eq!(refreshed.access_token.expose_secret(), "new-access-token");
+    assert_eq!(refreshed.refresh_token.expose_secret(), "new-refresh-token");
+
+    // Verify stored tokens are updated.
+    let stored = client.get_tokens().await.unwrap();
+    assert_eq!(stored.access_token.expose_secret(), "new-access-token");
+}
+
+#[tokio::test]
+async fn test_refresh_token_web_app_sends_basic_auth() {
+    let server = MockServer::start().await;
+    let token_url = format!("{}/v2/oauth/token", server.uri());
+
+    // Web app refresh: sends Basic auth AND form body.
+    Mock::given(method("POST"))
+        .and(path("/v2/oauth/token"))
+        .and(header(
+            "Authorization",
+            "Basic d2ViLWNsaWVudC1pZDp3ZWItY2xpZW50LXNlY3JldA==",
+        ))
+        .and(wiremock::matchers::body_string_contains("grant_type=refresh_token"))
+        .and(wiremock::matchers::body_string_contains("refresh_token=web-old-refresh"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(token_response_json()))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::with_web_app(
+        "test-agent",
+        "web-client-id",
+        SecretString::from("web-client-secret".to_string()),
+    )
+    .unwrap()
+    .with_sso_token_url(&token_url);
+
+    let old_tokens = EsiTokens {
+        access_token: SecretString::from("web-old-access".to_string()),
+        refresh_token: SecretString::from("web-old-refresh".to_string()),
+        expires_at: Utc::now() - Duration::seconds(60),
+    };
+    client.set_tokens(old_tokens).await;
+
+    let refreshed = client.refresh_token().await.unwrap();
+    assert_eq!(refreshed.access_token.expose_secret(), "new-access-token");
+}
+
+#[tokio::test]
+async fn test_refresh_token_skips_when_still_valid() {
+    let server = MockServer::start().await;
+    let token_url = format!("{}/v2/oauth/token", server.uri());
+
+    // No mock mounted — if refresh_token makes a network call, the test will fail.
+    let client = EsiClient::with_native_app("test-agent", "native-client-id")
+        .unwrap()
+        .with_sso_token_url(&token_url);
+
+    // Set tokens that are still valid (not needing refresh).
+    let valid_tokens = EsiTokens {
+        access_token: SecretString::from("still-valid".to_string()),
+        refresh_token: SecretString::from("r".to_string()),
+        expires_at: Utc::now() + Duration::seconds(300),
+    };
+    client.set_tokens(valid_tokens).await;
+
+    // refresh_token should return the existing tokens without a network call.
+    let result = client.refresh_token().await.unwrap();
+    assert_eq!(result.access_token.expose_secret(), "still-valid");
+}
+
+#[tokio::test]
+async fn test_exchange_code_server_error_propagates() {
+    let server = MockServer::start().await;
+    let token_url = format!("{}/v2/oauth/token", server.uri());
+
+    Mock::given(method("POST"))
+        .and(path("/v2/oauth/token"))
+        .respond_with(
+            ResponseTemplate::new(400).set_body_string(r#"{"error":"invalid_grant"}"#),
+        )
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::with_native_app("test-agent", "test-client")
+        .unwrap()
+        .with_sso_token_url(&token_url);
+
+    let verifier = SecretString::from("v".to_string());
+    let result = client
+        .exchange_code("bad-code", &verifier, "http://localhost/callback")
+        .await;
+
+    assert!(result.is_err());
+    let err = result.unwrap_err().to_string();
+    assert!(err.contains("token exchange failed"), "unexpected error: {err}");
 }

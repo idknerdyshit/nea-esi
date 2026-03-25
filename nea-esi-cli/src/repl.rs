@@ -309,7 +309,10 @@ pub async fn run(mut ctx: ExecContext, _config: Config) -> anyhow::Result<()> {
                     continue;
                 }
 
-                // Apply any per-command overrides
+                // Apply any per-command overrides, restoring defaults after dispatch.
+                let saved_character_id = ctx.character_id;
+                let saved_format = ctx.format;
+
                 if let Some(cid) = parsed.character_id {
                     ctx.character_id = Some(cid);
                 }
@@ -320,6 +323,10 @@ pub async fn run(mut ctx: ExecContext, _config: Config) -> anyhow::Result<()> {
                 if let Err(e) = crate::dispatch(&ctx, parsed.command).await {
                     eprintln!("Error: {e}");
                 }
+
+                // Restore original context values.
+                ctx.character_id = saved_character_id;
+                ctx.format = saved_format;
 
                 // Save tokens if refreshed
                 if let Some(tokens) = ctx.client.get_tokens().await {

@@ -83,7 +83,25 @@ impl Config {
         }
 
         let content = toml::to_string_pretty(self)?;
+
+        // Set restrictive permissions on Unix (config may contain client_secret).
+        #[cfg(unix)]
+        {
+            use std::io::Write;
+            use std::os::unix::fs::OpenOptionsExt;
+            let file = std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .mode(0o600)
+                .open(&path)?;
+            let mut writer = std::io::BufWriter::new(file);
+            writer.write_all(content.as_bytes())?;
+        }
+
+        #[cfg(not(unix))]
         std::fs::write(&path, content)?;
+
         Ok(())
     }
 }
