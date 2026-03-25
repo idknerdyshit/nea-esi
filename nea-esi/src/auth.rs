@@ -273,8 +273,6 @@ impl EsiClient {
             form.push(("client_id", creds.client_id().to_string()));
         }
 
-        // Drop guard so token_request can proceed.
-        drop(guard);
         let tokens = self.token_request(&form, "token refresh").await?;
         *self.tokens.write().await = Some(tokens.clone());
         debug!("token refresh complete");
