@@ -211,14 +211,18 @@ impl EsiClient {
             .as_ref()
             .ok_or_else(|| EsiError::Auth("no app credentials configured".into()))?;
 
-        let client_id = creds.client_id().to_string();
-        let form = [
+        let mut form = vec![
             ("grant_type", "authorization_code".to_string()),
             ("code", code.to_string()),
             ("redirect_uri", redirect_uri.to_string()),
-            ("client_id", client_id),
             ("code_verifier", code_verifier.expose_secret().to_string()),
         ];
+
+        // Only include client_id in the body for Native apps (Web apps send it
+        // via Basic auth in the Authorization header).
+        if matches!(creds, EsiAppCredentials::Native { .. }) {
+            form.push(("client_id", creds.client_id().to_string()));
+        }
 
         let tokens = self.token_request(&form, "token exchange").await?;
         *self.tokens.write().await = Some(tokens.clone());
@@ -259,15 +263,18 @@ impl EsiClient {
                 .clone()
         };
 
-        let client_id = creds.client_id().to_string();
-        let form = [
+        let mut form = vec![
             ("grant_type", "refresh_token".to_string()),
-            ("client_id", client_id),
             ("refresh_token", current_refresh.expose_secret().to_string()),
         ];
 
-        // Network call happens with mutex held (serialized) but RwLock released
-        // (so other tasks can still read the current token for in-flight requests).
+        // Only include client_id in the body for Native apps.
+        if matches!(creds, EsiAppCredentials::Native { .. }) {
+            form.push(("client_id", creds.client_id().to_string()));
+        }
+
+        // Drop guard so token_request can proceed.
+        drop(guard);
         let tokens = self.token_request(&form, "token refresh").await?;
         *self.tokens.write().await = Some(tokens.clone());
         debug!("token refresh complete");

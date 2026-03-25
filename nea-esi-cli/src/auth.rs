@@ -20,7 +20,7 @@ pub const DEFAULT_SCOPES: &[&str] = &[
     "esi-clones.read_clones.v1",
     "esi-clones.read_implants.v1",
     "esi-universe.read_structures.v1",
-"esi-fittings.read_fittings.v1",
+    "esi-fittings.read_fittings.v1",
     "esi-fleets.read_fleet.v1",
     "esi-characters.read_notifications.v1",
     "esi-industry.read_character_jobs.v1",
