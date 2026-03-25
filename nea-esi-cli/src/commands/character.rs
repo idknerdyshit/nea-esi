@@ -77,12 +77,16 @@ pub async fn execute(ctx: &super::ExecContext, cmd: CharacterCommand) -> anyhow:
             crate::output::print_list(&result, ctx.format)
         }
         CharacterCommand::Roles => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_roles(cid).await?;
             crate::output::print_value(&result, ctx.format)
         }
         CharacterCommand::Titles => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_titles(cid).await?;
             crate::output::print_list(&result, ctx.format)
         }
@@ -91,73 +95,108 @@ pub async fn execute(ctx: &super::ExecContext, cmd: CharacterCommand) -> anyhow:
             crate::output::print_list(&result, ctx.format)
         }
         CharacterCommand::Medals => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_medals(cid).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CharacterCommand::AgentsResearch => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_agents_research(cid).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CharacterCommand::Fatigue => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_fatigue(cid).await?;
             crate::output::print_value(&result, ctx.format)
         }
         CharacterCommand::FwStats => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_fw_stats(cid).await?;
             crate::output::print_value(&result, ctx.format)
         }
         CharacterCommand::Fleet => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_fleet(cid).await?;
             crate::output::print_value(&result, ctx.format)
         }
         CharacterCommand::Standings => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_standings(cid).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CharacterCommand::Location => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_location(cid).await?;
             crate::output::print_value(&result, ctx.format)
         }
         CharacterCommand::Ship => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_ship(cid).await?;
             crate::output::print_value(&result, ctx.format)
         }
         CharacterCommand::Online => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_online(cid).await?;
             crate::output::print_value(&result, ctx.format)
         }
         CharacterCommand::Opportunities => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_opportunities(cid).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CharacterCommand::Notifications => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_notifications(cid).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CharacterCommand::ContactNotifications => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_contact_notifications(cid).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CharacterCommand::Killmails => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_killmails(cid).await?;
             crate::output::print_list(&result, ctx.format)
         }
-        CharacterCommand::Search { query, categories, strict } => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
-            let result = ctx.client.character_search(cid, &query, &categories, strict).await?;
+        CharacterCommand::Search {
+            query,
+            categories,
+            strict,
+        } => {
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let result = ctx
+                .client
+                .character_search(cid, &query, &categories, strict)
+                .await?;
             crate::output::print_value(&result, ctx.format)
         }
     }

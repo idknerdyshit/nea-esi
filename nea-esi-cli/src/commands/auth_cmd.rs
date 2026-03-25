@@ -44,25 +44,19 @@ pub async fn execute(ctx: &super::ExecContext, cmd: AuthCommand) -> anyhow::Resu
             Ok(())
         }
         AuthCommand::Status => {
-            match crate::token_store::load_tokens()? {
-                Some(tokens) => {
-                    if tokens.is_expired() {
-                        println!("Status: EXPIRED (expired at {})", tokens.expires_at);
-                        println!("Run `nea-esi-cli auth login` to re-authenticate.");
-                    } else if tokens.needs_refresh() {
-                        println!(
-                            "Status: NEEDS REFRESH (expires at {})",
-                            tokens.expires_at
-                        );
-                        println!("Token will auto-refresh on next authenticated request.");
-                    } else {
-                        println!("Status: VALID (expires at {})", tokens.expires_at);
-                    }
+            if let Some(tokens) = crate::token_store::load_tokens()? {
+                if tokens.is_expired() {
+                    println!("Status: EXPIRED (expired at {})", tokens.expires_at);
+                    println!("Run `nea-esi-cli auth login` to re-authenticate.");
+                } else if tokens.needs_refresh() {
+                    println!("Status: NEEDS REFRESH (expires at {})", tokens.expires_at);
+                    println!("Token will auto-refresh on next authenticated request.");
+                } else {
+                    println!("Status: VALID (expires at {})", tokens.expires_at);
                 }
-                None => {
-                    println!("Status: NOT LOGGED IN");
-                    println!("Run `nea-esi-cli auth login` to authenticate.");
-                }
+            } else {
+                println!("Status: NOT LOGGED IN");
+                println!("Run `nea-esi-cli auth login` to authenticate.");
             }
             Ok(())
         }

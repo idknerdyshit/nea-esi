@@ -18,7 +18,7 @@ impl EsiClient {
     /// Fetch character info from ESI.
     #[tracing::instrument(skip(self))]
     pub async fn get_character(&self, character_id: i64) -> Result<EsiCharacterInfo> {
-        self.get_json(&format!("/characters/{}/", character_id)).await
+        self.get_json(&format!("/characters/{character_id}/")).await
     }
 
     /// Bulk character affiliation lookup. Auto-chunks at 1000.
@@ -42,41 +42,35 @@ impl EsiClient {
     /// Fetch character portrait URLs.
     #[tracing::instrument(skip(self))]
     pub async fn character_portrait(&self, character_id: i64) -> Result<EsiCharacterPortrait> {
-        self.get_json(&format!("/characters/{}/portrait/", character_id))
+        self.get_json(&format!("/characters/{character_id}/portrait/"))
             .await
     }
 
     /// Fetch character roles (authenticated).
     #[tracing::instrument(skip(self))]
     pub async fn character_roles(&self, character_id: i64) -> Result<EsiCharacterRoles> {
-        self.get_json(&format!("/characters/{}/roles/", character_id))
+        self.get_json(&format!("/characters/{character_id}/roles/"))
             .await
     }
 
     /// Fetch character titles (authenticated).
     #[tracing::instrument(skip(self))]
-    pub async fn character_titles(
-        &self,
-        character_id: i64,
-    ) -> Result<Vec<EsiCharacterTitle>> {
-        self.get_json(&format!("/characters/{}/titles/", character_id))
+    pub async fn character_titles(&self, character_id: i64) -> Result<Vec<EsiCharacterTitle>> {
+        self.get_json(&format!("/characters/{character_id}/titles/"))
             .await
     }
 
     /// Fetch character standings (authenticated).
     #[tracing::instrument(skip(self))]
     pub async fn character_standings(&self, character_id: i64) -> Result<Vec<EsiStanding>> {
-        self.get_json(&format!("/characters/{}/standings/", character_id))
+        self.get_json(&format!("/characters/{character_id}/standings/"))
             .await
     }
 
     /// Fetch character medals (authenticated).
     #[tracing::instrument(skip(self))]
-    pub async fn character_medals(
-        &self,
-        character_id: i64,
-    ) -> Result<Vec<EsiCharacterMedal>> {
-        self.get_json(&format!("/characters/{}/medals/", character_id))
+    pub async fn character_medals(&self, character_id: i64) -> Result<Vec<EsiCharacterMedal>> {
+        self.get_json(&format!("/characters/{character_id}/medals/"))
             .await
     }
 
@@ -86,27 +80,21 @@ impl EsiClient {
         &self,
         character_id: i64,
     ) -> Result<Vec<EsiAgentResearch>> {
-        self.get_json(&format!(
-            "/characters/{}/agents_research/",
-            character_id
-        ))
-        .await
+        self.get_json(&format!("/characters/{character_id}/agents_research/"))
+            .await
     }
 
     /// Fetch character jump fatigue (authenticated).
     #[tracing::instrument(skip(self))]
     pub async fn character_fatigue(&self, character_id: i64) -> Result<EsiFatigue> {
-        self.get_json(&format!("/characters/{}/fatigue/", character_id))
+        self.get_json(&format!("/characters/{character_id}/fatigue/"))
             .await
     }
 
     /// Fetch character FW stats (authenticated).
     #[tracing::instrument(skip(self))]
-    pub async fn character_fw_stats(
-        &self,
-        character_id: i64,
-    ) -> Result<EsiCharacterFwStats> {
-        self.get_json(&format!("/characters/{}/fw/stats/", character_id))
+    pub async fn character_fw_stats(&self, character_id: i64) -> Result<EsiCharacterFwStats> {
+        self.get_json(&format!("/characters/{character_id}/fw/stats/"))
             .await
     }
 
@@ -117,11 +105,8 @@ impl EsiClient {
         character_id: i64,
         character_ids: &[i64],
     ) -> Result<f64> {
-        self.post_json(
-            &format!("/characters/{}/cspa/", character_id),
-            character_ids,
-        )
-        .await
+        self.post_json(&format!("/characters/{character_id}/cspa/"), character_ids)
+            .await
     }
 
     /// Fetch a character's corporation history.
@@ -130,11 +115,8 @@ impl EsiClient {
         &self,
         character_id: i64,
     ) -> Result<Vec<EsiCorporationHistoryEntry>> {
-        self.get_json(&format!(
-            "/characters/{}/corporationhistory/",
-            character_id
-        ))
-        .await
+        self.get_json(&format!("/characters/{character_id}/corporationhistory/"))
+            .await
     }
 
     // -----------------------------------------------------------------------
@@ -144,7 +126,7 @@ impl EsiClient {
     /// Fetch all assets for a character, handling pagination.
     #[tracing::instrument(skip(self))]
     pub async fn character_assets(&self, character_id: i64) -> Result<Vec<EsiAssetItem>> {
-        self.get_paginated_json(&format!("/characters/{}/assets/", character_id))
+        self.get_paginated_json(&format!("/characters/{character_id}/assets/"))
             .await
     }
 
@@ -156,7 +138,7 @@ impl EsiClient {
         item_ids: &[i64],
     ) -> Result<Vec<EsiAssetLocation>> {
         self.post_json(
-            &format!("/characters/{}/assets/locations/", character_id),
+            &format!("/characters/{character_id}/assets/locations/"),
             item_ids,
         )
         .await
@@ -172,7 +154,7 @@ impl EsiClient {
         if item_ids.is_empty() {
             return Ok(Vec::new());
         }
-        let path = format!("/characters/{}/assets/names/", character_id);
+        let path = format!("/characters/{character_id}/assets/names/");
         let mut all = Vec::with_capacity(item_ids.len());
         for chunk in item_ids.chunks(ASSET_NAMES_CHUNK_SIZE) {
             let batch: Vec<EsiAssetName> = self.post_json(&path, &chunk).await?;
@@ -188,21 +170,15 @@ impl EsiClient {
     /// Fetch a character's ISK balance.
     #[tracing::instrument(skip(self))]
     pub async fn wallet_balance(&self, character_id: i64) -> Result<f64> {
-        self.get_json(&format!("/characters/{}/wallet/", character_id))
+        self.get_json(&format!("/characters/{character_id}/wallet/"))
             .await
     }
 
     /// Fetch a character's wallet journal (paginated).
     #[tracing::instrument(skip(self))]
-    pub async fn wallet_journal(
-        &self,
-        character_id: i64,
-    ) -> Result<Vec<EsiWalletJournalEntry>> {
-        self.get_paginated_json(&format!(
-            "/characters/{}/wallet/journal/",
-            character_id
-        ))
-        .await
+    pub async fn wallet_journal(&self, character_id: i64) -> Result<Vec<EsiWalletJournalEntry>> {
+        self.get_paginated_json(&format!("/characters/{character_id}/wallet/journal/"))
+            .await
     }
 
     /// Fetch a character's wallet transactions.
@@ -217,17 +193,13 @@ impl EsiClient {
         match from_id {
             Some(id) => {
                 self.get_json(&format!(
-                    "/characters/{}/wallet/transactions/?from_id={}",
-                    character_id, id
+                    "/characters/{character_id}/wallet/transactions/?from_id={id}"
                 ))
                 .await
             }
             None => {
-                self.get_json(&format!(
-                    "/characters/{}/wallet/transactions/",
-                    character_id
-                ))
-                .await
+                self.get_json(&format!("/characters/{character_id}/wallet/transactions/"))
+                    .await
             }
         }
     }
@@ -239,24 +211,21 @@ impl EsiClient {
     /// Fetch a character's trained skills.
     #[tracing::instrument(skip(self))]
     pub async fn character_skills(&self, character_id: i64) -> Result<EsiSkills> {
-        self.get_json(&format!("/characters/{}/skills/", character_id))
+        self.get_json(&format!("/characters/{character_id}/skills/"))
             .await
     }
 
     /// Fetch a character's skill queue.
     #[tracing::instrument(skip(self))]
-    pub async fn character_skillqueue(
-        &self,
-        character_id: i64,
-    ) -> Result<Vec<EsiSkillqueueEntry>> {
-        self.get_json(&format!("/characters/{}/skillqueue/", character_id))
+    pub async fn character_skillqueue(&self, character_id: i64) -> Result<Vec<EsiSkillqueueEntry>> {
+        self.get_json(&format!("/characters/{character_id}/skillqueue/"))
             .await
     }
 
     /// Fetch a character's attributes.
     #[tracing::instrument(skip(self))]
     pub async fn character_attributes(&self, character_id: i64) -> Result<EsiAttributes> {
-        self.get_json(&format!("/characters/{}/attributes/", character_id))
+        self.get_json(&format!("/characters/{character_id}/attributes/"))
             .await
     }
 
@@ -275,30 +244,20 @@ impl EsiClient {
     ) -> Result<Vec<EsiIndustryJob>> {
         if include_completed {
             self.get_json(&format!(
-                "/characters/{}/industry/jobs/?include_completed=true",
-                character_id
+                "/characters/{character_id}/industry/jobs/?include_completed=true"
             ))
             .await
         } else {
-            self.get_json(&format!(
-                "/characters/{}/industry/jobs/",
-                character_id
-            ))
-            .await
+            self.get_json(&format!("/characters/{character_id}/industry/jobs/"))
+                .await
         }
     }
 
     /// Fetch a character's blueprints (paginated).
     #[tracing::instrument(skip(self))]
-    pub async fn character_blueprints(
-        &self,
-        character_id: i64,
-    ) -> Result<Vec<EsiBlueprint>> {
-        self.get_paginated_json(&format!(
-            "/characters/{}/blueprints/",
-            character_id
-        ))
-        .await
+    pub async fn character_blueprints(&self, character_id: i64) -> Result<Vec<EsiBlueprint>> {
+        self.get_paginated_json(&format!("/characters/{character_id}/blueprints/"))
+            .await
     }
 
     // -----------------------------------------------------------------------
@@ -307,31 +266,22 @@ impl EsiClient {
 
     /// Fetch a character's current location.
     #[tracing::instrument(skip(self))]
-    pub async fn character_location(
-        &self,
-        character_id: i64,
-    ) -> Result<EsiLocation> {
-        self.get_json(&format!("/characters/{}/location/", character_id))
+    pub async fn character_location(&self, character_id: i64) -> Result<EsiLocation> {
+        self.get_json(&format!("/characters/{character_id}/location/"))
             .await
     }
 
     /// Fetch a character's current ship.
     #[tracing::instrument(skip(self))]
-    pub async fn character_ship(
-        &self,
-        character_id: i64,
-    ) -> Result<EsiShip> {
-        self.get_json(&format!("/characters/{}/ship/", character_id))
+    pub async fn character_ship(&self, character_id: i64) -> Result<EsiShip> {
+        self.get_json(&format!("/characters/{character_id}/ship/"))
             .await
     }
 
     /// Fetch a character's online status.
     #[tracing::instrument(skip(self))]
-    pub async fn character_online(
-        &self,
-        character_id: i64,
-    ) -> Result<EsiOnlineStatus> {
-        self.get_json(&format!("/characters/{}/online/", character_id))
+    pub async fn character_online(&self, character_id: i64) -> Result<EsiOnlineStatus> {
+        self.get_json(&format!("/characters/{character_id}/online/"))
             .await
     }
 
@@ -341,21 +291,15 @@ impl EsiClient {
 
     /// Fetch a character's clones.
     #[tracing::instrument(skip(self))]
-    pub async fn character_clones(
-        &self,
-        character_id: i64,
-    ) -> Result<EsiClones> {
-        self.get_json(&format!("/characters/{}/clones/", character_id))
+    pub async fn character_clones(&self, character_id: i64) -> Result<EsiClones> {
+        self.get_json(&format!("/characters/{character_id}/clones/"))
             .await
     }
 
     /// Fetch a character's active implants.
     #[tracing::instrument(skip(self))]
-    pub async fn character_implants(
-        &self,
-        character_id: i64,
-    ) -> Result<Vec<i32>> {
-        self.get_json(&format!("/characters/{}/implants/", character_id))
+    pub async fn character_implants(&self, character_id: i64) -> Result<Vec<i32>> {
+        self.get_json(&format!("/characters/{character_id}/implants/"))
             .await
     }
 
@@ -369,11 +313,8 @@ impl EsiClient {
         &self,
         character_id: i64,
     ) -> Result<Vec<EsiLoyaltyPoints>> {
-        self.get_json(&format!(
-            "/characters/{}/loyalty/points/",
-            character_id
-        ))
-        .await
+        self.get_json(&format!("/characters/{character_id}/loyalty/points/"))
+            .await
     }
 
     // -----------------------------------------------------------------------
@@ -382,11 +323,8 @@ impl EsiClient {
 
     /// Fetch a character's planetary colonies.
     #[tracing::instrument(skip(self))]
-    pub async fn character_planets(
-        &self,
-        character_id: i64,
-    ) -> Result<Vec<EsiPlanetSummary>> {
-        self.get_json(&format!("/characters/{}/planets/", character_id))
+    pub async fn character_planets(&self, character_id: i64) -> Result<Vec<EsiPlanetSummary>> {
+        self.get_json(&format!("/characters/{character_id}/planets/"))
             .await
     }
 
@@ -397,11 +335,8 @@ impl EsiClient {
         character_id: i64,
         planet_id: i32,
     ) -> Result<EsiPlanetDetail> {
-        self.get_json(&format!(
-            "/characters/{}/planets/{}/",
-            character_id, planet_id
-        ))
-        .await
+        self.get_json(&format!("/characters/{character_id}/planets/{planet_id}/"))
+            .await
     }
 
     // -----------------------------------------------------------------------
@@ -410,11 +345,8 @@ impl EsiClient {
 
     /// Fetch a character's personal mining ledger (paginated).
     #[tracing::instrument(skip(self))]
-    pub async fn character_mining_ledger(
-        &self,
-        character_id: i64,
-    ) -> Result<Vec<EsiMiningEntry>> {
-        self.get_paginated_json(&format!("/characters/{}/mining/", character_id))
+    pub async fn character_mining_ledger(&self, character_id: i64) -> Result<Vec<EsiMiningEntry>> {
+        self.get_paginated_json(&format!("/characters/{character_id}/mining/"))
             .await
     }
 
@@ -425,8 +357,7 @@ impl EsiClient {
         character_id: i64,
     ) -> Result<Vec<EsiContactNotification>> {
         self.get_json(&format!(
-            "/characters/{}/notifications/contacts/",
-            character_id
+            "/characters/{character_id}/notifications/contacts/"
         ))
         .await
     }
@@ -437,7 +368,7 @@ impl EsiClient {
         &self,
         character_id: i64,
     ) -> Result<Vec<EsiCompletedOpportunity>> {
-        self.get_json(&format!("/characters/{}/opportunities/", character_id))
+        self.get_json(&format!("/characters/{character_id}/opportunities/"))
             .await
     }
 }

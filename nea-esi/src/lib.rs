@@ -1,18 +1,19 @@
 // nea-esi: Client for the EVE Swagger Interface (ESI) API.
+#![allow(clippy::missing_errors_doc)]
 
 pub mod auth;
 mod endpoints;
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 use std::time::Duration;
 
 use rand::RngExt;
 use reqwest::header::{HeaderMap, HeaderValue, USER_AGENT as USER_AGENT_HEADER};
 use secrecy::{ExposeSecret, SecretString};
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use thiserror::Error;
 use tokio::sync::RwLock;
 use tracing::{debug, warn};
@@ -25,18 +26,17 @@ pub use endpoints::compute_best_bid_ask;
 // ---------------------------------------------------------------------------
 
 pub const BASE_URL: &str = "https://esi.evetech.net/latest";
-pub const THE_FORGE: i32 = 10000002;
-pub const DOMAIN: i32 = 10000043;
-pub const SINQ_LAISON: i32 = 10000032;
-pub const HEIMATAR: i32 = 10000030;
-pub const METROPOLIS: i32 = 10000042;
-pub const JITA_STATION: i64 = 60003760;
-pub const AMARR_STATION: i64 = 60008494;
-pub const DODIXIE_STATION: i64 = 60011866;
-pub const RENS_STATION: i64 = 60004588;
-pub const HEK_STATION: i64 = 60005686;
-pub const DEFAULT_USER_AGENT: &str =
-    "nea-esi (https://github.com/idknerdyshit/new-eden-analytics)";
+pub const THE_FORGE: i32 = 10_000_002;
+pub const DOMAIN: i32 = 10_000_043;
+pub const SINQ_LAISON: i32 = 10_000_032;
+pub const HEIMATAR: i32 = 10_000_030;
+pub const METROPOLIS: i32 = 10_000_042;
+pub const JITA_STATION: i64 = 60_003_760;
+pub const AMARR_STATION: i64 = 60_008_494;
+pub const DODIXIE_STATION: i64 = 60_011_866;
+pub const RENS_STATION: i64 = 60_004_588;
+pub const HEK_STATION: i64 = 60_005_686;
+pub const DEFAULT_USER_AGENT: &str = "nea-esi (https://github.com/idknerdyshit/new-eden-analytics)";
 
 const MAX_RETRIES: u32 = 3;
 const RETRY_BASE_MS: u64 = 1000;
@@ -74,7 +74,6 @@ pub enum EsiError {
 
 pub type Result<T> = std::result::Result<T, EsiError>;
 
-
 mod types;
 pub use types::*;
 
@@ -110,6 +109,12 @@ pub struct EsiClient {
 
 impl EsiClient {
     /// Create a new ESI client with the default User-Agent and 30-second timeout.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the default user-agent string is invalid (this should never happen
+    /// as it is a compile-time constant).
+    #[must_use]
     pub fn new() -> Self {
         // SAFETY: DEFAULT_USER_AGENT is a compile-time constant with valid ASCII.
         Self::with_user_agent(DEFAULT_USER_AGENT).expect("default user-agent is valid")
@@ -125,6 +130,11 @@ impl EsiClient {
     /// ```text
     /// my-app (contact@example.com; +https://github.com/me/my-app; eve:MyCharacter)
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the `reqwest::Client` builder fails to build (should not happen
+    /// with default settings).
     pub fn with_user_agent(user_agent: &str) -> Result<Self> {
         let mut headers = HeaderMap::new();
         headers.insert(
@@ -155,7 +165,11 @@ impl EsiClient {
     }
 
     /// Create an ESI client configured for a web application (confidential client).
-    pub fn with_web_app(user_agent: &str, client_id: &str, client_secret: SecretString) -> Result<Self> {
+    pub fn with_web_app(
+        user_agent: &str,
+        client_id: &str,
+        client_secret: SecretString,
+    ) -> Result<Self> {
         let mut client = Self::with_user_agent(user_agent)?;
         client.app_credentials = Some(EsiAppCredentials::Web {
             client_id: client_id.to_string(),
@@ -174,24 +188,28 @@ impl EsiClient {
     }
 
     /// Set app credentials (builder pattern).
+    #[must_use]
     pub fn credentials(mut self, creds: EsiAppCredentials) -> Self {
         self.app_credentials = Some(creds);
         self
     }
 
     /// Override the base URL (builder pattern). Useful for testing with mock servers.
+    #[must_use]
     pub fn with_base_url(mut self, url: impl Into<String>) -> Self {
         self.base_url = url.into();
         self
     }
 
     /// Override the SSO token URL (builder pattern). Useful for testing with mock servers.
+    #[must_use]
     pub fn with_sso_token_url(mut self, url: impl Into<String>) -> Self {
         self.sso_token_url = url.into();
         self
     }
 
     /// Return the current error budget value.
+    #[must_use]
     pub fn error_budget(&self) -> i32 {
         self.error_budget.load(Ordering::Relaxed)
     }
@@ -242,20 +260,22 @@ impl EsiClient {
         }
     }
 
-    /// Enable the ETag response cache (builder pattern).
+    /// Enable the `ETag` response cache (builder pattern).
+    #[must_use]
     pub fn with_cache(mut self) -> Self {
         self.cache = Some(Arc::new(RwLock::new(HashMap::new())));
         self
     }
 
-    /// Set the maximum number of ETag cache entries (builder pattern).
+    /// Set the maximum number of `ETag` cache entries (builder pattern).
     /// Default is 1000. When the cache is full, an arbitrary entry is evicted.
+    #[must_use]
     pub fn with_max_cache_entries(mut self, n: usize) -> Self {
         self.max_cache_entries = n;
         self
     }
 
-    /// Clear all cached ETag responses.
+    /// Clear all cached `ETag` responses.
     pub async fn clear_cache(&self) {
         if let Some(ref cache) = self.cache {
             cache.write().await.clear();
@@ -292,17 +312,13 @@ impl EsiClient {
     }
 
     /// Fetch all pages of a paginated POST endpoint and flatten into one Vec.
-    pub async fn post_paginated<T, B>(
-        &self,
-        base_url: &str,
-        body: &B,
-    ) -> Result<Vec<T>>
+    pub async fn post_paginated<T, B>(&self, base_url: &str, body: &B) -> Result<Vec<T>>
     where
         T: DeserializeOwned + Send + 'static,
         B: Serialize + Sync,
     {
         let body_bytes = serde_json::to_vec(body)
-            .map_err(|e| EsiError::Internal(format!("failed to serialize body: {}", e)))?;
+            .map_err(|e| EsiError::Internal(format!("failed to serialize body: {e}")))?;
         self.paginated_fetch(base_url, PageFetcher::Post(Arc::new(body_bytes)))
             .await
     }
@@ -314,7 +330,7 @@ impl EsiClient {
         fetcher: PageFetcher,
     ) -> Result<Vec<T>> {
         let separator = if base_url.contains('?') { '&' } else { '?' };
-        let first_url = format!("{}{}page=1", base_url, separator);
+        let first_url = format!("{base_url}{separator}page=1");
 
         let resp = match &fetcher {
             PageFetcher::Get => self.request(&first_url).await?,
@@ -339,15 +355,13 @@ impl EsiClient {
             for batch in remaining_pages.chunks(20) {
                 let mut handles = Vec::with_capacity(batch.len());
                 for &page in batch {
-                    let url = format!("{}{}page={}", base_url, separator, page);
+                    let url = format!("{base_url}{separator}page={page}");
                     let this = self.clone_shared();
                     let fetcher = fetcher.clone();
                     handles.push(tokio::spawn(async move {
                         let resp = match &fetcher {
                             PageFetcher::Get => this.request(&url).await?,
-                            PageFetcher::Post(body) => {
-                                this.request_post_raw(&url, body).await?
-                            }
+                            PageFetcher::Post(body) => this.request_post_raw(&url, body).await?,
                         };
                         let page_items: Vec<T> = resp
                             .json()
@@ -373,7 +387,7 @@ impl EsiClient {
     // ETag caching
     // -----------------------------------------------------------------------
 
-    /// Make a GET request with ETag caching support.
+    /// Make a GET request with `ETag` caching support.
     ///
     /// Uses `execute_request` internally for retry/401 handling. On 304,
     /// returns the cached body. On 200, caches the response.
@@ -420,10 +434,10 @@ impl EsiClient {
         if let (Some(cache), Some(etag)) = (&self.cache, etag) {
             let mut guard = cache.write().await;
             // Evict an arbitrary entry if the cache is at capacity.
-            if guard.len() >= self.max_cache_entries {
-                if let Some(key) = guard.keys().next().cloned() {
-                    guard.remove(&key);
-                }
+            if guard.len() >= self.max_cache_entries
+                && let Some(key) = guard.keys().next().cloned()
+            {
+                guard.remove(&key);
             }
             guard.insert(
                 url.to_string(),
@@ -479,7 +493,13 @@ impl EsiClient {
                         if matches!(status, 502..=504) && attempt < MAX_RETRIES {
                             let jitter = rand::rng().random_range(0..500);
                             let delay = RETRY_BASE_MS * 2u64.pow(attempt) + jitter;
-                            warn!(url, status, attempt, delay_ms = delay, "retrying transient error");
+                            warn!(
+                                url,
+                                status,
+                                attempt,
+                                delay_ms = delay,
+                                "retrying transient error"
+                            );
                             tokio::time::sleep(Duration::from_millis(delay)).await;
                             continue;
                         }
@@ -524,10 +544,12 @@ impl EsiClient {
                 return Err(EsiError::Api { status, message });
             }
 
+            #[allow(clippy::cast_possible_truncation)]
+            let elapsed_ms = start.elapsed().as_millis() as u64;
             debug!(
                 url,
                 status = retry_resp.status().as_u16(),
-                elapsed_ms = start.elapsed().as_millis() as u64,
+                elapsed_ms,
                 "ESI request (after 401 retry)"
             );
 
@@ -541,10 +563,12 @@ impl EsiClient {
             return Err(EsiError::Api { status, message });
         }
 
+        #[allow(clippy::cast_possible_truncation)]
+        let elapsed_ms = start.elapsed().as_millis() as u64;
         debug!(
             url,
             status = response.status().as_u16(),
-            elapsed_ms = start.elapsed().as_millis() as u64,
+            elapsed_ms,
             error_budget = self.error_budget.load(Ordering::Relaxed),
             "ESI request"
         );
@@ -565,7 +589,7 @@ impl EsiClient {
         body: &(impl Serialize + ?Sized),
     ) -> Result<reqwest::Response> {
         let body_bytes = serde_json::to_vec(body)
-            .map_err(|e| EsiError::Internal(format!("failed to serialize body: {}", e)))?;
+            .map_err(|e| EsiError::Internal(format!("failed to serialize body: {e}")))?;
         self.execute_request(url, move |client, url| {
             client
                 .post(url)
@@ -576,11 +600,7 @@ impl EsiClient {
     }
 
     /// Make a rate-limited POST request with a pre-serialized JSON body.
-    async fn request_post_raw(
-        &self,
-        url: &str,
-        body: &Arc<Vec<u8>>,
-    ) -> Result<reqwest::Response> {
+    async fn request_post_raw(&self, url: &str, body: &Arc<Vec<u8>>) -> Result<reqwest::Response> {
         let body = Arc::clone(body);
         self.execute_request(url, move |client, url| {
             client
@@ -604,7 +624,7 @@ impl EsiClient {
         body: &(impl Serialize + ?Sized),
     ) -> Result<reqwest::Response> {
         let body_bytes = serde_json::to_vec(body)
-            .map_err(|e| EsiError::Internal(format!("failed to serialize body: {}", e)))?;
+            .map_err(|e| EsiError::Internal(format!("failed to serialize body: {e}")))?;
         self.execute_request(url, move |client, url| {
             client
                 .put(url)
@@ -817,10 +837,7 @@ mod tests {
     fn test_deserialize_market_history_entry() {
         let json = r#"{"date":"2026-03-01","average":5.25,"highest":5.27,"lowest":5.11,"volume":72016862,"order_count":2267}"#;
         let entry: EsiMarketHistoryEntry = serde_json::from_str(json).unwrap();
-        assert_eq!(
-            entry.date,
-            NaiveDate::from_ymd_opt(2026, 3, 1).unwrap()
-        );
+        assert_eq!(entry.date, NaiveDate::from_ymd_opt(2026, 3, 1).unwrap());
         assert!((entry.average - 5.25).abs() < f64::EPSILON);
         assert_eq!(entry.volume, 72016862);
         assert_eq!(entry.order_count, 2267);
@@ -1583,7 +1600,10 @@ mod tests {
         assert_eq!(entry.description, Some("Market: Tritanium".to_string()));
         assert_eq!(entry.first_party_id, Some(91234567));
         assert_eq!(entry.second_party_id, Some(92345678));
-        assert_eq!(entry.context_id_type, Some("market_transaction_id".to_string()));
+        assert_eq!(
+            entry.context_id_type,
+            Some("market_transaction_id".to_string())
+        );
         assert_eq!(entry.tax_receiver_id, Some(1000035));
     }
 

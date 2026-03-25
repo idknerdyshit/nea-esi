@@ -93,7 +93,7 @@ impl EsiClient {
     pub(crate) fn build_url(&self, path: &str, params: &[(&str, &str)]) -> Result<url::Url> {
         let base = format!("{}{}", self.base_url, path);
         url::Url::parse_with_params(&base, params)
-            .map_err(|e| EsiError::Internal(format!("failed to build URL: {}", e)))
+            .map_err(|e| EsiError::Internal(format!("failed to build URL: {e}")))
     }
 
     /// Build a contact endpoint URL with standing and optional label/watched params.
@@ -104,12 +104,9 @@ impl EsiClient {
         label_ids: Option<&[i64]>,
         watched: Option<bool>,
     ) -> Result<url::Url> {
-        let base = format!(
-            "{}/characters/{}/contacts/",
-            self.base_url, character_id
-        );
+        let base = format!("{}/characters/{}/contacts/", self.base_url, character_id);
         let mut url = url::Url::parse(&base)
-            .map_err(|e| EsiError::Internal(format!("failed to build URL: {}", e)))?;
+            .map_err(|e| EsiError::Internal(format!("failed to build URL: {e}")))?;
         let standing_str = standing.to_string();
         url.query_pairs_mut().append_pair("standing", &standing_str);
         if let Some(labels) = label_ids {
@@ -119,8 +116,7 @@ impl EsiClient {
             }
         }
         if let Some(w) = watched {
-            url.query_pairs_mut()
-                .append_pair("watched", &w.to_string());
+            url.query_pairs_mut().append_pair("watched", &w.to_string());
         }
         Ok(url)
     }

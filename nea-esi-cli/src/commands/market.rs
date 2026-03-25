@@ -47,8 +47,15 @@ pub async fn execute(ctx: &super::ExecContext, cmd: MarketCommand) -> anyhow::Re
             let result = ctx.client.market_history(region_id, type_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
-        MarketCommand::Orders { region_id, type_id, order_type } => {
-            let result = ctx.client.market_orders(region_id, type_id, order_type.as_deref()).await?;
+        MarketCommand::Orders {
+            region_id,
+            type_id,
+            order_type,
+        } => {
+            let result = ctx
+                .client
+                .market_orders(region_id, type_id, order_type.as_deref())
+                .await?;
             crate::output::print_list(&result, ctx.format)
         }
         MarketCommand::Prices => {
@@ -67,7 +74,10 @@ pub async fn execute(ctx: &super::ExecContext, cmd: MarketCommand) -> anyhow::Re
             let result = ctx.client.get_market_group(market_group_id).await?;
             crate::output::print_value(&result, ctx.format)
         }
-        MarketCommand::StructureOrders { structure_id, order_type: _ } => {
+        MarketCommand::StructureOrders {
+            structure_id,
+            order_type: _,
+        } => {
             let result = ctx.client.structure_orders(structure_id).await?;
             crate::output::print_list(&result, ctx.format)
         }

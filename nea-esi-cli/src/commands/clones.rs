@@ -9,7 +9,9 @@ pub enum ClonesCommand {
 }
 
 pub async fn execute(ctx: &super::ExecContext, cmd: ClonesCommand) -> anyhow::Result<()> {
-    let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+    let cid = ctx
+        .character_id
+        .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
     match cmd {
         ClonesCommand::List => {
             let result = ctx.client.character_clones(cid).await?;

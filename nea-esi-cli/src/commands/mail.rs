@@ -28,7 +28,9 @@ pub enum MailCommand {
 }
 
 pub async fn execute(ctx: &super::ExecContext, cmd: MailCommand) -> anyhow::Result<()> {
-    let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+    let cid = ctx
+        .character_id
+        .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
     match cmd {
         MailCommand::List { before } => {
             let result = match before {

@@ -1,6 +1,6 @@
 // Integration tests for Phase 1 ESI endpoints using wiremock.
 
-use wiremock::matchers::{method, path, query_param, body_json};
+use wiremock::matchers::{body_json, method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use nea_esi::{EsiClient, EsiFittingItem, EsiMailRecipient, EsiNewFitting, EsiNewMail};
@@ -16,8 +16,7 @@ async fn test_create_fitting() {
     Mock::given(method("POST"))
         .and(path("/characters/91234567/fittings/"))
         .respond_with(
-            ResponseTemplate::new(200)
-                .set_body_json(serde_json::json!({"fitting_id": 99999})),
+            ResponseTemplate::new(200).set_body_json(serde_json::json!({"fitting_id": 99999})),
         )
         .mount(&server)
         .await;
@@ -139,10 +138,7 @@ async fn test_paginated_type_ids() {
     Mock::given(method("GET"))
         .and(path("/universe/types/"))
         .and(query_param("page", "2"))
-        .respond_with(
-            ResponseTemplate::new(200)
-                .set_body_json(serde_json::json!([4, 5])),
-        )
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!([4, 5])))
         .mount(&server)
         .await;
 
@@ -363,7 +359,9 @@ async fn test_character_implants() {
 
     Mock::given(method("GET"))
         .and(path("/characters/91234567/implants/"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!([9899, 9941, 9942])))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(serde_json::json!([9899, 9941, 9942])),
+        )
         .mount(&server)
         .await;
 
@@ -661,7 +659,10 @@ async fn test_character_industry_jobs() {
         .await;
 
     let client = EsiClient::new().with_base_url(server.uri());
-    let jobs = client.character_industry_jobs(91234567, false).await.unwrap();
+    let jobs = client
+        .character_industry_jobs(91234567, false)
+        .await
+        .unwrap();
 
     assert_eq!(jobs.len(), 1);
     assert_eq!(jobs[0].job_id, 123);
@@ -1040,7 +1041,10 @@ async fn test_corp_wallet_transactions() {
         .await;
 
     let client = EsiClient::new().with_base_url(server.uri());
-    let txns = client.corp_wallet_transactions(98000001, 1, None).await.unwrap();
+    let txns = client
+        .corp_wallet_transactions(98000001, 1, None)
+        .await
+        .unwrap();
 
     assert_eq!(txns.len(), 1);
     assert_eq!(txns[0].transaction_id, 1234567890);
@@ -1093,11 +1097,9 @@ async fn test_corp_asset_names() {
     Mock::given(method("POST"))
         .and(path("/corporations/98000001/assets/names/"))
         .and(body_json(serde_json::json!([1234567890_i64])))
-        .respond_with(
-            ResponseTemplate::new(200).set_body_json(serde_json::json!([
-                {"item_id": 1234567890_i64, "name": "My Ship"}
-            ])),
-        )
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!([
+            {"item_id": 1234567890_i64, "name": "My Ship"}
+        ])))
         .mount(&server)
         .await;
 
@@ -1122,11 +1124,9 @@ async fn test_corp_asset_locations() {
     Mock::given(method("POST"))
         .and(path("/corporations/98000001/assets/locations/"))
         .and(body_json(serde_json::json!([1234567890_i64])))
-        .respond_with(
-            ResponseTemplate::new(200).set_body_json(serde_json::json!([
-                {"item_id": 1234567890_i64, "position": {"x": 1.0, "y": 2.0, "z": 3.0}}
-            ])),
-        )
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!([
+            {"item_id": 1234567890_i64, "position": {"x": 1.0, "y": 2.0, "z": 3.0}}
+        ])))
         .mount(&server)
         .await;
 
@@ -1670,7 +1670,7 @@ async fn test_opportunity_group_ids() {
 
     Mock::given(method("GET"))
         .and(path("/opportunities/groups/"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(&serde_json::json!([1, 2, 3])))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!([1, 2, 3])))
         .mount(&server)
         .await;
 
@@ -1689,7 +1689,7 @@ async fn test_opportunity_task_ids() {
 
     Mock::given(method("GET"))
         .and(path("/opportunities/tasks/"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(&serde_json::json!([10, 20])))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!([10, 20])))
         .mount(&server)
         .await;
 
@@ -2042,13 +2042,16 @@ async fn test_get_route_basic() {
         .and(path("/route/30000142/30002187/"))
         .respond_with(
             ResponseTemplate::new(200)
-                .set_body_json(&serde_json::json!([30000142, 30000144, 30002187])),
+                .set_body_json(serde_json::json!([30000142, 30000144, 30002187])),
         )
         .mount(&server)
         .await;
 
     let client = EsiClient::new().with_base_url(server.uri());
-    let route = client.get_route(30000142, 30002187, None, &[], None).await.unwrap();
+    let route = client
+        .get_route(30000142, 30002187, None, &[], None)
+        .await
+        .unwrap();
     assert_eq!(route, vec![30000142, 30000144, 30002187]);
 }
 
@@ -2066,7 +2069,7 @@ async fn test_get_route_with_options() {
         .and(query_param("avoid", "30000144"))
         .respond_with(
             ResponseTemplate::new(200)
-                .set_body_json(&serde_json::json!([30000142, 30000145, 30002187])),
+                .set_body_json(serde_json::json!([30000142, 30000145, 30002187])),
         )
         .mount(&server)
         .await;
@@ -2125,7 +2128,10 @@ async fn test_character_corporation_history() {
         .await;
 
     let client = EsiClient::new().with_base_url(server.uri());
-    let history = client.character_corporation_history(91234567).await.unwrap();
+    let history = client
+        .character_corporation_history(91234567)
+        .await
+        .unwrap();
     assert_eq!(history.len(), 2);
     assert_eq!(history[0].corporation_id, 98000001);
     assert!(!history[0].is_deleted);

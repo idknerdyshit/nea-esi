@@ -43,12 +43,26 @@ pub enum NavigationCommand {
 
 pub async fn execute(ctx: &super::ExecContext, cmd: NavigationCommand) -> anyhow::Result<()> {
     match cmd {
-        NavigationCommand::Route { origin, destination, flag, avoid } => {
-            let result = ctx.client.get_route(origin, destination, flag.as_deref(), &avoid, None).await?;
+        NavigationCommand::Route {
+            origin,
+            destination,
+            flag,
+            avoid,
+        } => {
+            let result = ctx
+                .client
+                .get_route(origin, destination, flag.as_deref(), &avoid, None)
+                .await?;
             crate::output::print_value(&result, ctx.format)
         }
-        NavigationCommand::Waypoint { destination_id, add_to_beginning, clear_other } => {
-            ctx.client.ui_autopilot_waypoint(destination_id, add_to_beginning, clear_other).await?;
+        NavigationCommand::Waypoint {
+            destination_id,
+            add_to_beginning,
+            clear_other,
+        } => {
+            ctx.client
+                .ui_autopilot_waypoint(destination_id, add_to_beginning, clear_other)
+                .await?;
             println!("Waypoint set.");
             Ok(())
         }

@@ -124,6 +124,7 @@ pub struct EsiCorpStarbase {
 
 /// Detailed configuration of a corporation starbase (POS).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct EsiCorpStarbaseDetail {
     pub state: String,
     #[serde(default)]

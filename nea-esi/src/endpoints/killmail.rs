@@ -12,7 +12,7 @@ impl EsiClient {
         killmail_id: i64,
         killmail_hash: &str,
     ) -> Result<serde_json::Value> {
-        self.get_json(&format!("/killmails/{}/{}/", killmail_id, killmail_hash))
+        self.get_json(&format!("/killmails/{killmail_id}/{killmail_hash}/"))
             .await
     }
 
@@ -23,27 +23,21 @@ impl EsiClient {
         killmail_id: i64,
         killmail_hash: &str,
     ) -> Result<EsiKillmail> {
-        self.get_json(&format!("/killmails/{}/{}/", killmail_id, killmail_hash))
+        self.get_json(&format!("/killmails/{killmail_id}/{killmail_hash}/"))
             .await
     }
 
     /// Fetch recent killmails for a character (authenticated, paginated).
     #[tracing::instrument(skip(self))]
     pub async fn character_killmails(&self, character_id: i64) -> Result<Vec<EsiKillmailRef>> {
-        self.get_paginated_json(&format!(
-            "/characters/{}/killmails/recent/",
-            character_id
-        ))
-        .await
+        self.get_paginated_json(&format!("/characters/{character_id}/killmails/recent/"))
+            .await
     }
 
     /// Fetch recent killmails for a corporation (authenticated, paginated).
     #[tracing::instrument(skip(self))]
     pub async fn corporation_killmails(&self, corporation_id: i64) -> Result<Vec<EsiKillmailRef>> {
-        self.get_paginated_json(&format!(
-            "/corporations/{}/killmails/recent/",
-            corporation_id
-        ))
-        .await
+        self.get_paginated_json(&format!("/corporations/{corporation_id}/killmails/recent/"))
+            .await
     }
 }

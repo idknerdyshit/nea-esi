@@ -16,8 +16,8 @@ Rate-limited Rust client library and interactive CLI for EVE Online's [ESI](http
 
 | Crate | Version | Description |
 |-------|---------|-------------|
-| [`nea-esi`](nea-esi/) | 0.7.0 | Async ESI client library |
-| [`nea-esi-cli`](nea-esi-cli/) | 0.1.0 | Interactive CLI |
+| [`nea-esi`](nea-esi/) | 0.7.1 | Async ESI client library |
+| [`nea-esi-cli`](nea-esi-cli/) | 0.1.1 | Interactive CLI |
 
 ## Quick Start
 

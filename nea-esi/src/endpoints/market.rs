@@ -1,4 +1,6 @@
-use crate::{EsiClient, EsiMarketGroupInfo, EsiMarketHistoryEntry, EsiMarketOrder, EsiMarketPrice, Result};
+use crate::{
+    EsiClient, EsiMarketGroupInfo, EsiMarketHistoryEntry, EsiMarketOrder, EsiMarketPrice, Result,
+};
 
 impl EsiClient {
     // -----------------------------------------------------------------------
@@ -12,7 +14,7 @@ impl EsiClient {
         region_id: i32,
         type_id: i32,
     ) -> Result<Vec<EsiMarketHistoryEntry>> {
-        self.get_json(&format!("/markets/{}/history/?type_id={}", region_id, type_id))
+        self.get_json(&format!("/markets/{region_id}/history/?type_id={type_id}"))
             .await
     }
 
@@ -28,8 +30,7 @@ impl EsiClient {
     ) -> Result<Vec<EsiMarketOrder>> {
         let ot = order_type.unwrap_or("all");
         self.get_paginated_json(&format!(
-            "/markets/{}/orders/?type_id={}&order_type={}",
-            region_id, type_id, ot
+            "/markets/{region_id}/orders/?type_id={type_id}&order_type={ot}"
         ))
         .await
     }
@@ -43,7 +44,7 @@ impl EsiClient {
     /// List all type IDs with active market orders in a region (paginated).
     #[tracing::instrument(skip(self))]
     pub async fn market_type_ids(&self, region_id: i32) -> Result<Vec<i32>> {
-        self.get_paginated_json(&format!("/markets/{}/types/", region_id))
+        self.get_paginated_json(&format!("/markets/{region_id}/types/"))
             .await
     }
 
@@ -56,21 +57,15 @@ impl EsiClient {
     /// Fetch market group info.
     #[tracing::instrument(skip(self))]
     pub async fn get_market_group(&self, market_group_id: i32) -> Result<EsiMarketGroupInfo> {
-        self.get_json(&format!("/markets/groups/{}/", market_group_id))
+        self.get_json(&format!("/markets/groups/{market_group_id}/"))
             .await
     }
 
     /// Fetch market orders at a structure (authenticated, paginated).
     #[tracing::instrument(skip(self))]
-    pub async fn structure_orders(
-        &self,
-        structure_id: i64,
-    ) -> Result<Vec<EsiMarketOrder>> {
-        self.get_paginated_json(&format!(
-            "/markets/structures/{}/",
-            structure_id
-        ))
-        .await
+    pub async fn structure_orders(&self, structure_id: i64) -> Result<Vec<EsiMarketOrder>> {
+        self.get_paginated_json(&format!("/markets/structures/{structure_id}/"))
+            .await
     }
 }
 
@@ -78,6 +73,7 @@ impl EsiClient {
 /// best bid, best ask, total bid volume, and total ask volume.
 ///
 /// Returns `(best_bid, best_ask, bid_volume, ask_volume)`.
+#[must_use]
 pub fn compute_best_bid_ask(
     orders: &[EsiMarketOrder],
     station_id: i64,

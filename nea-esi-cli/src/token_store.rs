@@ -33,8 +33,8 @@ impl From<StoredTokens> for EsiTokens {
 }
 
 pub fn save_tokens(tokens: &EsiTokens) -> anyhow::Result<()> {
-    let path = Config::token_path()
-        .ok_or_else(|| anyhow::anyhow!("Cannot determine config directory"))?;
+    let path =
+        Config::token_path().ok_or_else(|| anyhow::anyhow!("Cannot determine config directory"))?;
 
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
@@ -46,6 +46,7 @@ pub fn save_tokens(tokens: &EsiTokens) -> anyhow::Result<()> {
     // Set restrictive permissions on Unix before writing
     #[cfg(unix)]
     {
+        use std::io::Write;
         use std::os::unix::fs::OpenOptionsExt;
         let file = std::fs::OpenOptions::new()
             .write(true)
@@ -53,7 +54,6 @@ pub fn save_tokens(tokens: &EsiTokens) -> anyhow::Result<()> {
             .truncate(true)
             .mode(0o600)
             .open(&path)?;
-        use std::io::Write;
         let mut writer = std::io::BufWriter::new(file);
         writer.write_all(json.as_bytes())?;
     }
@@ -65,9 +65,8 @@ pub fn save_tokens(tokens: &EsiTokens) -> anyhow::Result<()> {
 }
 
 pub fn load_tokens() -> anyhow::Result<Option<EsiTokens>> {
-    let path = match Config::token_path() {
-        Some(p) => p,
-        None => return Ok(None),
+    let Some(path) = Config::token_path() else {
+        return Ok(None);
     };
 
     if !path.exists() {
@@ -80,10 +79,10 @@ pub fn load_tokens() -> anyhow::Result<Option<EsiTokens>> {
 }
 
 pub fn delete_tokens() -> anyhow::Result<()> {
-    if let Some(path) = Config::token_path() {
-        if path.exists() {
-            std::fs::remove_file(&path)?;
-        }
+    if let Some(path) = Config::token_path()
+        && path.exists()
+    {
+        std::fs::remove_file(&path)?;
     }
     Ok(())
 }

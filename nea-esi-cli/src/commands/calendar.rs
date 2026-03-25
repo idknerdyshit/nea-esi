@@ -22,7 +22,9 @@ pub enum CalendarCommand {
 }
 
 pub async fn execute(ctx: &super::ExecContext, cmd: CalendarCommand) -> anyhow::Result<()> {
-    let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+    let cid = ctx
+        .character_id
+        .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
     match cmd {
         CalendarCommand::List => {
             let result = ctx.client.character_calendar(cid, None).await?;
@@ -33,7 +35,9 @@ pub async fn execute(ctx: &super::ExecContext, cmd: CalendarCommand) -> anyhow::
             crate::output::print_value(&result, ctx.format)
         }
         CalendarCommand::Respond { event_id, response } => {
-            ctx.client.set_event_response(cid, event_id, &response).await?;
+            ctx.client
+                .set_event_response(cid, event_id, &response)
+                .await?;
             println!("Response set to '{response}' for event {event_id}.");
             Ok(())
         }

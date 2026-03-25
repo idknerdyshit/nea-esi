@@ -240,10 +240,7 @@ async fn test_get_structure_with_auth() {
     };
     client.set_tokens(tokens).await;
 
-    let url = format!(
-        "{}/latest/universe/structures/1000000000001/",
-        server.uri()
-    );
+    let url = format!("{}/latest/universe/structures/1000000000001/", server.uri());
     let resp = client.request(&url).await.unwrap();
     let info: nea_esi::EsiStructureInfo = resp.json().await.unwrap();
 
@@ -309,10 +306,18 @@ async fn test_exchange_code_native_app_sends_form_body() {
     // Native app: form body includes client_id, NO Basic auth header.
     Mock::given(method("POST"))
         .and(path("/v2/oauth/token"))
-        .and(wiremock::matchers::body_string_contains("grant_type=authorization_code"))
-        .and(wiremock::matchers::body_string_contains("code=test-auth-code"))
-        .and(wiremock::matchers::body_string_contains("client_id=native-client-id"))
-        .and(wiremock::matchers::body_string_contains("code_verifier=test-verifier"))
+        .and(wiremock::matchers::body_string_contains(
+            "grant_type=authorization_code",
+        ))
+        .and(wiremock::matchers::body_string_contains(
+            "code=test-auth-code",
+        ))
+        .and(wiremock::matchers::body_string_contains(
+            "client_id=native-client-id",
+        ))
+        .and(wiremock::matchers::body_string_contains(
+            "code_verifier=test-verifier",
+        ))
         .respond_with(ResponseTemplate::new(200).set_body_json(token_response_json()))
         .expect(1)
         .mount(&server)
@@ -350,8 +355,12 @@ async fn test_exchange_code_web_app_sends_basic_auth() {
             "Authorization",
             "Basic d2ViLWNsaWVudC1pZDp3ZWItY2xpZW50LXNlY3JldA==",
         ))
-        .and(wiremock::matchers::body_string_contains("grant_type=authorization_code"))
-        .and(wiremock::matchers::body_string_contains("code=web-auth-code"))
+        .and(wiremock::matchers::body_string_contains(
+            "grant_type=authorization_code",
+        ))
+        .and(wiremock::matchers::body_string_contains(
+            "code=web-auth-code",
+        ))
         .respond_with(ResponseTemplate::new(200).set_body_json(token_response_json()))
         .expect(1)
         .mount(&server)
@@ -382,9 +391,15 @@ async fn test_refresh_token_native_app() {
     // Native app refresh: form body includes grant_type, client_id, refresh_token.
     Mock::given(method("POST"))
         .and(path("/v2/oauth/token"))
-        .and(wiremock::matchers::body_string_contains("grant_type=refresh_token"))
-        .and(wiremock::matchers::body_string_contains("client_id=native-client-id"))
-        .and(wiremock::matchers::body_string_contains("refresh_token=old-refresh"))
+        .and(wiremock::matchers::body_string_contains(
+            "grant_type=refresh_token",
+        ))
+        .and(wiremock::matchers::body_string_contains(
+            "client_id=native-client-id",
+        ))
+        .and(wiremock::matchers::body_string_contains(
+            "refresh_token=old-refresh",
+        ))
         .respond_with(ResponseTemplate::new(200).set_body_json(token_response_json()))
         .expect(1)
         .mount(&server)
@@ -423,8 +438,12 @@ async fn test_refresh_token_web_app_sends_basic_auth() {
             "Authorization",
             "Basic d2ViLWNsaWVudC1pZDp3ZWItY2xpZW50LXNlY3JldA==",
         ))
-        .and(wiremock::matchers::body_string_contains("grant_type=refresh_token"))
-        .and(wiremock::matchers::body_string_contains("refresh_token=web-old-refresh"))
+        .and(wiremock::matchers::body_string_contains(
+            "grant_type=refresh_token",
+        ))
+        .and(wiremock::matchers::body_string_contains(
+            "refresh_token=web-old-refresh",
+        ))
         .respond_with(ResponseTemplate::new(200).set_body_json(token_response_json()))
         .expect(1)
         .mount(&server)
@@ -479,9 +498,7 @@ async fn test_exchange_code_server_error_propagates() {
 
     Mock::given(method("POST"))
         .and(path("/v2/oauth/token"))
-        .respond_with(
-            ResponseTemplate::new(400).set_body_string(r#"{"error":"invalid_grant"}"#),
-        )
+        .respond_with(ResponseTemplate::new(400).set_body_string(r#"{"error":"invalid_grant"}"#))
         .expect(1)
         .mount(&server)
         .await;
@@ -497,5 +514,8 @@ async fn test_exchange_code_server_error_propagates() {
 
     assert!(result.is_err());
     let err = result.unwrap_err().to_string();
-    assert!(err.contains("token exchange failed"), "unexpected error: {err}");
+    assert!(
+        err.contains("token exchange failed"),
+        "unexpected error: {err}"
+    );
 }

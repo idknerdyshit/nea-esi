@@ -65,6 +65,7 @@ pub enum CorporationCommand {
     Standings,
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn execute(ctx: &super::ExecContext, cmd: CorporationCommand) -> anyhow::Result<()> {
     match cmd {
         CorporationCommand::Info { id } => {
@@ -76,112 +77,163 @@ pub async fn execute(ctx: &super::ExecContext, cmd: CorporationCommand) -> anyho
             crate::output::print_list(&result, ctx.format)
         }
         CorporationCommand::Icons => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_icons(corp_id).await?;
             crate::output::print_value(&result, ctx.format)
         }
         CorporationCommand::MemberLimit => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_member_limit(corp_id).await?;
-            crate::output::print_scalar(result, "member_limit", ctx.format)
+            crate::output::print_scalar(result, "member_limit", ctx.format);
+            Ok(())
         }
         CorporationCommand::Members => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_members(corp_id).await?;
             crate::output::print_value(&result, ctx.format)
         }
         CorporationCommand::MemberTracking => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_member_tracking(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CorporationCommand::MemberTitles => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_member_titles(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CorporationCommand::MemberRoles => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_member_roles(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CorporationCommand::RolesHistory => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_roles_history(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CorporationCommand::Structures => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_structures(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CorporationCommand::Starbases => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_starbases(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
-        CorporationCommand::StarbaseDetail { starbase_id, system_id } => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
-            let result = ctx.client.corp_starbase_detail(corp_id, starbase_id, system_id).await?;
+        CorporationCommand::StarbaseDetail {
+            starbase_id,
+            system_id,
+        } => {
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let result = ctx
+                .client
+                .corp_starbase_detail(corp_id, starbase_id, system_id)
+                .await?;
             crate::output::print_value(&result, ctx.format)
         }
         CorporationCommand::Divisions => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_divisions(corp_id).await?;
             crate::output::print_value(&result, ctx.format)
         }
         CorporationCommand::Facilities => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_facilities(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CorporationCommand::FwStats => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_fw_stats(corp_id).await?;
             crate::output::print_value(&result, ctx.format)
         }
         CorporationCommand::Medals => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_medals(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CorporationCommand::MedalsIssued => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_medals_issued(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CorporationCommand::ContainerLogs => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_container_logs(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CorporationCommand::CustomsOffices { system_id: _ } => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_customs_offices(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CorporationCommand::Shareholders => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_shareholders(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CorporationCommand::Titles => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_titles(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CorporationCommand::Contacts => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_contacts(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CorporationCommand::ContactLabels => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_contact_labels(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
         CorporationCommand::Standings => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_standings(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }

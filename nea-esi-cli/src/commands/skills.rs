@@ -11,7 +11,9 @@ pub enum SkillsCommand {
 }
 
 pub async fn execute(ctx: &super::ExecContext, cmd: SkillsCommand) -> anyhow::Result<()> {
-    let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+    let cid = ctx
+        .character_id
+        .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
     match cmd {
         SkillsCommand::List => {
             let result = ctx.client.character_skills(cid).await?;

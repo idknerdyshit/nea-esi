@@ -134,6 +134,7 @@ pub struct EsiDogmaAttribute {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct EsiDogmaEffect {
     pub effect_id: i32,
     pub name: String,

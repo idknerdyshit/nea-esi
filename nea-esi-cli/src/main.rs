@@ -1,3 +1,5 @@
+#![allow(clippy::missing_errors_doc)]
+
 mod auth;
 mod cli;
 mod commands;
@@ -67,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
 pub async fn dispatch(ctx: &ExecContext, command: Command) -> anyhow::Result<()> {
     match command {
         Command::Auth { command } => commands::auth_cmd::execute(ctx, command).await?,
-        Command::Config { command } => commands::config_cmd::execute(ctx, command).await?,
+        Command::Config { command } => commands::config_cmd::execute(ctx, command)?,
         Command::Interactive => unreachable!(),
         Command::Status => commands::status::execute(ctx).await?,
         Command::Market { command } => commands::market::execute(ctx, command).await?,
@@ -102,11 +104,7 @@ pub async fn dispatch(ctx: &ExecContext, command: Command) -> anyhow::Result<()>
 }
 
 fn build_client(config: &config::Config) -> anyhow::Result<EsiClient> {
-    let ua = config
-        .app
-        .user_agent
-        .as_deref()
-        .unwrap_or("nea-esi-cli");
+    let ua = config.app.user_agent.as_deref().unwrap_or("nea-esi-cli");
 
     let client = match (&config.app.client_id, &config.app.client_secret) {
         (Some(id), Some(secret)) => {

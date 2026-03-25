@@ -33,33 +33,52 @@ pub enum WalletCommand {
 pub async fn execute(ctx: &super::ExecContext, cmd: WalletCommand) -> anyhow::Result<()> {
     match cmd {
         WalletCommand::Balance => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.wallet_balance(cid).await?;
-            crate::output::print_scalar(result, "balance", ctx.format)
+            crate::output::print_scalar(result, "balance", ctx.format);
+            Ok(())
         }
         WalletCommand::Journal => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.wallet_journal(cid).await?;
             crate::output::print_list(&result, ctx.format)
         }
         WalletCommand::Transactions { from_id } => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.wallet_transactions(cid, from_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
         WalletCommand::CorpBalances => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_wallet_balances(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
-        WalletCommand::CorpJournal { division, before_id: _ } => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+        WalletCommand::CorpJournal {
+            division,
+            before_id: _,
+        } => {
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_wallet_journal(corp_id, division).await?;
             crate::output::print_list(&result, ctx.format)
         }
         WalletCommand::CorpTransactions { division, from_id } => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
-            let result = ctx.client.corp_wallet_transactions(corp_id, division, from_id).await?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let result = ctx
+                .client
+                .corp_wallet_transactions(corp_id, division, from_id)
+                .await?;
             crate::output::print_list(&result, ctx.format)
         }
     }

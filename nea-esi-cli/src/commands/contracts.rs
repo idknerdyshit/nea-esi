@@ -48,32 +48,47 @@ pub enum ContractsCommand {
 pub async fn execute(ctx: &super::ExecContext, cmd: ContractsCommand) -> anyhow::Result<()> {
     match cmd {
         ContractsCommand::List => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_contracts(cid).await?;
             crate::output::print_list(&result, ctx.format)
         }
         ContractsCommand::Items { contract_id } => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
-            let result = ctx.client.character_contract_items(cid, contract_id).await?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let result = ctx
+                .client
+                .character_contract_items(cid, contract_id)
+                .await?;
             crate::output::print_list(&result, ctx.format)
         }
         ContractsCommand::Bids { contract_id } => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_contract_bids(cid, contract_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
         ContractsCommand::CorpList => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_contracts(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
         ContractsCommand::CorpItems { contract_id } => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_contract_items(corp_id, contract_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
         ContractsCommand::CorpBids { contract_id } => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_contract_bids(corp_id, contract_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
@@ -81,11 +96,17 @@ pub async fn execute(ctx: &super::ExecContext, cmd: ContractsCommand) -> anyhow:
             let result = ctx.client.public_contracts(region_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
-        ContractsCommand::PublicItems { contract_id, region_id: _ } => {
+        ContractsCommand::PublicItems {
+            contract_id,
+            region_id: _,
+        } => {
             let result = ctx.client.public_contract_items(contract_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
-        ContractsCommand::PublicBids { contract_id, region_id: _ } => {
+        ContractsCommand::PublicBids {
+            contract_id,
+            region_id: _,
+        } => {
             let result = ctx.client.public_contract_bids(contract_id).await?;
             crate::output::print_list(&result, ctx.format)
         }

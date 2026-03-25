@@ -37,7 +37,7 @@ pub const DEFAULT_SCOPES: &[&str] = &[
     "esi-industry.read_character_mining.v1",
 ];
 
-/// Additional write scopes beyond DEFAULT_SCOPES.
+/// Additional write scopes beyond `DEFAULT_SCOPES`.
 const WRITE_SCOPES: &[&str] = &[
     "esi-mail.send_mail.v1",
     "esi-mail.organize_mail.v1",
@@ -70,11 +70,15 @@ pub async fn login(
 
     // Determine scopes
     let scopes: Vec<&str> = if opts.all_scopes {
-        DEFAULT_SCOPES.iter().chain(WRITE_SCOPES.iter()).copied().collect()
+        DEFAULT_SCOPES
+            .iter()
+            .chain(WRITE_SCOPES.iter())
+            .copied()
+            .collect()
     } else if let Some(ref custom) = opts.scopes {
-        custom.iter().map(|s| s.as_str()).collect()
+        custom.iter().map(String::as_str).collect()
     } else if !config.auth.scopes.is_empty() {
-        config.auth.scopes.iter().map(|s| s.as_str()).collect()
+        config.auth.scopes.iter().map(String::as_str).collect()
     } else {
         DEFAULT_SCOPES.to_vec()
     };
@@ -149,7 +153,10 @@ async fn login_browser(client: &EsiClient, scopes: &[&str]) -> anyhow::Result<Es
         .await?;
 
     token_store::save_tokens(&tokens)?;
-    eprintln!("Logged in successfully. Token expires at {}", tokens.expires_at);
+    eprintln!(
+        "Logged in successfully. Token expires at {}",
+        tokens.expires_at
+    );
 
     Ok(tokens)
 }
@@ -175,10 +182,10 @@ async fn login_copy_paste(client: &EsiClient, scopes: &[&str]) -> anyhow::Result
         .get("code")
         .ok_or_else(|| anyhow::anyhow!("No 'code' parameter found in the URL you pasted"))?;
 
-    if let Some(state) = params.get("state") {
-        if *state != challenge.state {
-            anyhow::bail!("State mismatch — the callback URL doesn't match this login session");
-        }
+    if let Some(state) = params.get("state")
+        && *state != challenge.state
+    {
+        anyhow::bail!("State mismatch — the callback URL doesn't match this login session");
     }
 
     eprintln!("Exchanging authorization code...");
@@ -187,7 +194,10 @@ async fn login_copy_paste(client: &EsiClient, scopes: &[&str]) -> anyhow::Result
         .await?;
 
     token_store::save_tokens(&tokens)?;
-    eprintln!("Logged in successfully. Token expires at {}", tokens.expires_at);
+    eprintln!(
+        "Logged in successfully. Token expires at {}",
+        tokens.expires_at
+    );
 
     Ok(tokens)
 }

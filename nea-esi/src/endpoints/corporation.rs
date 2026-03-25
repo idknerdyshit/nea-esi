@@ -17,7 +17,8 @@ impl EsiClient {
     /// Fetch corporation info from ESI.
     #[tracing::instrument(skip(self))]
     pub async fn get_corporation(&self, corporation_id: i64) -> Result<EsiCorporationInfo> {
-        self.get_json(&format!("/corporations/{}/", corporation_id)).await
+        self.get_json(&format!("/corporations/{corporation_id}/"))
+            .await
     }
 
     /// Fetch a corporation's alliance history.
@@ -26,11 +27,8 @@ impl EsiClient {
         &self,
         corporation_id: i64,
     ) -> Result<Vec<EsiAllianceHistoryEntry>> {
-        self.get_json(&format!(
-            "/corporations/{}/alliancehistory/",
-            corporation_id
-        ))
-        .await
+        self.get_json(&format!("/corporations/{corporation_id}/alliancehistory/"))
+            .await
     }
 
     /// List NPC corporation IDs.
@@ -49,7 +47,7 @@ impl EsiClient {
         &self,
         corporation_id: i64,
     ) -> Result<Vec<EsiCorpWalletDivision>> {
-        self.get_json(&format!("/corporations/{}/wallets/", corporation_id))
+        self.get_json(&format!("/corporations/{corporation_id}/wallets/"))
             .await
     }
 
@@ -61,8 +59,7 @@ impl EsiClient {
         division: i32,
     ) -> Result<Vec<EsiWalletJournalEntry>> {
         self.get_paginated_json(&format!(
-            "/corporations/{}/wallets/{}/journal/",
-            corporation_id, division
+            "/corporations/{corporation_id}/wallets/{division}/journal/"
         ))
         .await
     }
@@ -80,15 +77,13 @@ impl EsiClient {
         match from_id {
             Some(id) => {
                 self.get_json(&format!(
-                    "/corporations/{}/wallets/{}/transactions/?from_id={}",
-                    corporation_id, division, id
+                    "/corporations/{corporation_id}/wallets/{division}/transactions/?from_id={id}"
                 ))
                 .await
             }
             None => {
                 self.get_json(&format!(
-                    "/corporations/{}/wallets/{}/transactions/",
-                    corporation_id, division
+                    "/corporations/{corporation_id}/wallets/{division}/transactions/"
                 ))
                 .await
             }
@@ -102,7 +97,7 @@ impl EsiClient {
     /// Fetch corporation assets (paginated).
     #[tracing::instrument(skip(self))]
     pub async fn corp_assets(&self, corporation_id: i64) -> Result<Vec<EsiAssetItem>> {
-        self.get_paginated_json(&format!("/corporations/{}/assets/", corporation_id))
+        self.get_paginated_json(&format!("/corporations/{corporation_id}/assets/"))
             .await
     }
 
@@ -114,7 +109,7 @@ impl EsiClient {
         item_ids: &[i64],
     ) -> Result<Vec<EsiAssetName>> {
         self.post_json(
-            &format!("/corporations/{}/assets/names/", corporation_id),
+            &format!("/corporations/{corporation_id}/assets/names/"),
             item_ids,
         )
         .await
@@ -128,7 +123,7 @@ impl EsiClient {
         item_ids: &[i64],
     ) -> Result<Vec<EsiAssetLocation>> {
         self.post_json(
-            &format!("/corporations/{}/assets/locations/", corporation_id),
+            &format!("/corporations/{corporation_id}/assets/locations/"),
             item_ids,
         )
         .await
@@ -149,27 +144,20 @@ impl EsiClient {
     ) -> Result<Vec<EsiIndustryJob>> {
         if include_completed {
             self.get_paginated_json(&format!(
-                "/corporations/{}/industry/jobs/?include_completed=true",
-                corporation_id
+                "/corporations/{corporation_id}/industry/jobs/?include_completed=true"
             ))
             .await
         } else {
-            self.get_paginated_json(&format!(
-                "/corporations/{}/industry/jobs/",
-                corporation_id
-            ))
-            .await
+            self.get_paginated_json(&format!("/corporations/{corporation_id}/industry/jobs/"))
+                .await
         }
     }
 
     /// Fetch corporation blueprints (paginated).
     #[tracing::instrument(skip(self))]
     pub async fn corp_blueprints(&self, corporation_id: i64) -> Result<Vec<EsiBlueprint>> {
-        self.get_paginated_json(&format!(
-            "/corporations/{}/blueprints/",
-            corporation_id
-        ))
-        .await
+        self.get_paginated_json(&format!("/corporations/{corporation_id}/blueprints/"))
+            .await
     }
 
     // -----------------------------------------------------------------------
@@ -179,11 +167,8 @@ impl EsiClient {
     /// Fetch corporation contracts (paginated).
     #[tracing::instrument(skip(self))]
     pub async fn corp_contracts(&self, corporation_id: i64) -> Result<Vec<EsiContract>> {
-        self.get_paginated_json(&format!(
-            "/corporations/{}/contracts/",
-            corporation_id
-        ))
-        .await
+        self.get_paginated_json(&format!("/corporations/{corporation_id}/contracts/"))
+            .await
     }
 
     /// Fetch bids on a corporation contract.
@@ -194,8 +179,7 @@ impl EsiClient {
         contract_id: i64,
     ) -> Result<Vec<EsiContractBid>> {
         self.get_json(&format!(
-            "/corporations/{}/contracts/{}/bids/",
-            corporation_id, contract_id
+            "/corporations/{corporation_id}/contracts/{contract_id}/bids/"
         ))
         .await
     }
@@ -208,8 +192,7 @@ impl EsiClient {
         contract_id: i64,
     ) -> Result<Vec<EsiContractItem>> {
         self.get_json(&format!(
-            "/corporations/{}/contracts/{}/items/",
-            corporation_id, contract_id
+            "/corporations/{corporation_id}/contracts/{contract_id}/items/"
         ))
         .await
     }
@@ -221,21 +204,15 @@ impl EsiClient {
     /// Fetch corporation active market orders.
     #[tracing::instrument(skip(self))]
     pub async fn corp_orders(&self, corporation_id: i64) -> Result<Vec<EsiCharacterOrder>> {
-        self.get_json(&format!("/corporations/{}/orders/", corporation_id))
+        self.get_json(&format!("/corporations/{corporation_id}/orders/"))
             .await
     }
 
     /// Fetch corporation order history (paginated).
     #[tracing::instrument(skip(self))]
-    pub async fn corp_order_history(
-        &self,
-        corporation_id: i64,
-    ) -> Result<Vec<EsiCharacterOrder>> {
-        self.get_paginated_json(&format!(
-            "/corporations/{}/orders/history/",
-            corporation_id
-        ))
-        .await
+    pub async fn corp_order_history(&self, corporation_id: i64) -> Result<Vec<EsiCharacterOrder>> {
+        self.get_paginated_json(&format!("/corporations/{corporation_id}/orders/history/"))
+            .await
     }
 
     // -----------------------------------------------------------------------
@@ -245,30 +222,21 @@ impl EsiClient {
     /// Fetch corporation member IDs.
     #[tracing::instrument(skip(self))]
     pub async fn corp_members(&self, corporation_id: i64) -> Result<Vec<i64>> {
-        self.get_json(&format!("/corporations/{}/members/", corporation_id))
+        self.get_json(&format!("/corporations/{corporation_id}/members/"))
             .await
     }
 
     /// Fetch corporation member titles.
     #[tracing::instrument(skip(self))]
-    pub async fn corp_member_titles(
-        &self,
-        corporation_id: i64,
-    ) -> Result<Vec<EsiCorpMemberTitle>> {
-        self.get_json(&format!(
-            "/corporations/{}/members/titles/",
-            corporation_id
-        ))
-        .await
+    pub async fn corp_member_titles(&self, corporation_id: i64) -> Result<Vec<EsiCorpMemberTitle>> {
+        self.get_json(&format!("/corporations/{corporation_id}/members/titles/"))
+            .await
     }
 
     /// Fetch corporation member roles.
     #[tracing::instrument(skip(self))]
-    pub async fn corp_member_roles(
-        &self,
-        corporation_id: i64,
-    ) -> Result<Vec<EsiCorpMemberRole>> {
-        self.get_json(&format!("/corporations/{}/roles/", corporation_id))
+    pub async fn corp_member_roles(&self, corporation_id: i64) -> Result<Vec<EsiCorpMemberRole>> {
+        self.get_json(&format!("/corporations/{corporation_id}/roles/"))
             .await
     }
 
@@ -278,21 +246,15 @@ impl EsiClient {
         &self,
         corporation_id: i64,
     ) -> Result<Vec<EsiCorpMemberTracking>> {
-        self.get_json(&format!(
-            "/corporations/{}/membertracking/",
-            corporation_id
-        ))
-        .await
+        self.get_json(&format!("/corporations/{corporation_id}/membertracking/"))
+            .await
     }
 
     /// Fetch corporation member limit.
     #[tracing::instrument(skip(self))]
     pub async fn corp_member_limit(&self, corporation_id: i64) -> Result<i32> {
-        self.get_json(&format!(
-            "/corporations/{}/members/limit/",
-            corporation_id
-        ))
-        .await
+        self.get_json(&format!("/corporations/{corporation_id}/members/limit/"))
+            .await
     }
 
     // -----------------------------------------------------------------------
@@ -301,28 +263,16 @@ impl EsiClient {
 
     /// Fetch corporation structures (paginated).
     #[tracing::instrument(skip(self))]
-    pub async fn corp_structures(
-        &self,
-        corporation_id: i64,
-    ) -> Result<Vec<EsiCorpStructure>> {
-        self.get_paginated_json(&format!(
-            "/corporations/{}/structures/",
-            corporation_id
-        ))
-        .await
+    pub async fn corp_structures(&self, corporation_id: i64) -> Result<Vec<EsiCorpStructure>> {
+        self.get_paginated_json(&format!("/corporations/{corporation_id}/structures/"))
+            .await
     }
 
     /// Fetch corporation starbases (POSes).
     #[tracing::instrument(skip(self))]
-    pub async fn corp_starbases(
-        &self,
-        corporation_id: i64,
-    ) -> Result<Vec<EsiCorpStarbase>> {
-        self.get_json(&format!(
-            "/corporations/{}/starbases/",
-            corporation_id
-        ))
-        .await
+    pub async fn corp_starbases(&self, corporation_id: i64) -> Result<Vec<EsiCorpStarbase>> {
+        self.get_json(&format!("/corporations/{corporation_id}/starbases/"))
+            .await
     }
 
     /// Fetch detailed configuration of a specific starbase.
@@ -334,8 +284,7 @@ impl EsiClient {
         system_id: i32,
     ) -> Result<EsiCorpStarbaseDetail> {
         self.get_json(&format!(
-            "/corporations/{}/starbases/{}/?system_id={}",
-            corporation_id, starbase_id, system_id
+            "/corporations/{corporation_id}/starbases/{starbase_id}/?system_id={system_id}"
         ))
         .await
     }
@@ -347,24 +296,15 @@ impl EsiClient {
     /// Fetch corporation contacts (authenticated, paginated).
     #[tracing::instrument(skip(self))]
     pub async fn corp_contacts(&self, corporation_id: i64) -> Result<Vec<EsiContact>> {
-        self.get_paginated_json(&format!(
-            "/corporations/{}/contacts/",
-            corporation_id
-        ))
-        .await
+        self.get_paginated_json(&format!("/corporations/{corporation_id}/contacts/"))
+            .await
     }
 
     /// Fetch corporation contact labels (authenticated).
     #[tracing::instrument(skip(self))]
-    pub async fn corp_contact_labels(
-        &self,
-        corporation_id: i64,
-    ) -> Result<Vec<EsiContactLabel>> {
-        self.get_json(&format!(
-            "/corporations/{}/contacts/labels/",
-            corporation_id
-        ))
-        .await
+    pub async fn corp_contact_labels(&self, corporation_id: i64) -> Result<Vec<EsiContactLabel>> {
+        self.get_json(&format!("/corporations/{corporation_id}/contacts/labels/"))
+            .await
     }
 
     // -----------------------------------------------------------------------
@@ -373,140 +313,86 @@ impl EsiClient {
 
     /// Fetch corporation container audit logs (authenticated, paginated).
     #[tracing::instrument(skip(self))]
-    pub async fn corp_container_logs(
-        &self,
-        corporation_id: i64,
-    ) -> Result<Vec<EsiContainerLog>> {
-        self.get_paginated_json(&format!(
-            "/corporations/{}/containers/logs/",
-            corporation_id
-        ))
-        .await
+    pub async fn corp_container_logs(&self, corporation_id: i64) -> Result<Vec<EsiContainerLog>> {
+        self.get_paginated_json(&format!("/corporations/{corporation_id}/containers/logs/"))
+            .await
     }
 
     /// Fetch corporation customs offices (authenticated, paginated).
     #[tracing::instrument(skip(self))]
-    pub async fn corp_customs_offices(
-        &self,
-        corporation_id: i64,
-    ) -> Result<Vec<EsiCustomsOffice>> {
-        self.get_paginated_json(&format!(
-            "/corporations/{}/customs_offices/",
-            corporation_id
-        ))
-        .await
+    pub async fn corp_customs_offices(&self, corporation_id: i64) -> Result<Vec<EsiCustomsOffice>> {
+        self.get_paginated_json(&format!("/corporations/{corporation_id}/customs_offices/"))
+            .await
     }
 
     /// Fetch corporation divisions.
     #[tracing::instrument(skip(self))]
     pub async fn corp_divisions(&self, corporation_id: i64) -> Result<EsiCorpDivisions> {
-        self.get_json(&format!(
-            "/corporations/{}/divisions/",
-            corporation_id
-        ))
-        .await
+        self.get_json(&format!("/corporations/{corporation_id}/divisions/"))
+            .await
     }
 
     /// Fetch corporation facilities.
     #[tracing::instrument(skip(self))]
-    pub async fn corp_facilities(
-        &self,
-        corporation_id: i64,
-    ) -> Result<Vec<EsiCorpFacility>> {
-        self.get_json(&format!(
-            "/corporations/{}/facilities/",
-            corporation_id
-        ))
-        .await
+    pub async fn corp_facilities(&self, corporation_id: i64) -> Result<Vec<EsiCorpFacility>> {
+        self.get_json(&format!("/corporations/{corporation_id}/facilities/"))
+            .await
     }
 
     /// Fetch corporation FW stats.
     #[tracing::instrument(skip(self))]
     pub async fn corp_fw_stats(&self, corporation_id: i64) -> Result<EsiCorpFwStats> {
-        self.get_json(&format!(
-            "/corporations/{}/fw/stats/",
-            corporation_id
-        ))
-        .await
+        self.get_json(&format!("/corporations/{corporation_id}/fw/stats/"))
+            .await
     }
 
     /// Fetch corporation icon URLs.
     #[tracing::instrument(skip(self))]
     pub async fn corp_icons(&self, corporation_id: i64) -> Result<EsiCorpIcons> {
-        self.get_json(&format!("/corporations/{}/icons/", corporation_id))
+        self.get_json(&format!("/corporations/{corporation_id}/icons/"))
             .await
     }
 
     /// Fetch corporation medals (paginated).
     #[tracing::instrument(skip(self))]
     pub async fn corp_medals(&self, corporation_id: i64) -> Result<Vec<EsiCorpMedal>> {
-        self.get_paginated_json(&format!(
-            "/corporations/{}/medals/",
-            corporation_id
-        ))
-        .await
+        self.get_paginated_json(&format!("/corporations/{corporation_id}/medals/"))
+            .await
     }
 
     /// Fetch issued medals (paginated).
     #[tracing::instrument(skip(self))]
-    pub async fn corp_medals_issued(
-        &self,
-        corporation_id: i64,
-    ) -> Result<Vec<EsiIssuedMedal>> {
-        self.get_paginated_json(&format!(
-            "/corporations/{}/medals/issued/",
-            corporation_id
-        ))
-        .await
+    pub async fn corp_medals_issued(&self, corporation_id: i64) -> Result<Vec<EsiIssuedMedal>> {
+        self.get_paginated_json(&format!("/corporations/{corporation_id}/medals/issued/"))
+            .await
     }
 
     /// Fetch corporation role change history (paginated).
     #[tracing::instrument(skip(self))]
-    pub async fn corp_roles_history(
-        &self,
-        corporation_id: i64,
-    ) -> Result<Vec<EsiRoleHistory>> {
-        self.get_paginated_json(&format!(
-            "/corporations/{}/roles/history/",
-            corporation_id
-        ))
-        .await
+    pub async fn corp_roles_history(&self, corporation_id: i64) -> Result<Vec<EsiRoleHistory>> {
+        self.get_paginated_json(&format!("/corporations/{corporation_id}/roles/history/"))
+            .await
     }
 
     /// Fetch corporation shareholders (paginated).
     #[tracing::instrument(skip(self))]
-    pub async fn corp_shareholders(
-        &self,
-        corporation_id: i64,
-    ) -> Result<Vec<EsiShareholder>> {
-        self.get_paginated_json(&format!(
-            "/corporations/{}/shareholders/",
-            corporation_id
-        ))
-        .await
+    pub async fn corp_shareholders(&self, corporation_id: i64) -> Result<Vec<EsiShareholder>> {
+        self.get_paginated_json(&format!("/corporations/{corporation_id}/shareholders/"))
+            .await
     }
 
     /// Fetch corporation standings (paginated).
     #[tracing::instrument(skip(self))]
-    pub async fn corp_standings(
-        &self,
-        corporation_id: i64,
-    ) -> Result<Vec<EsiStanding>> {
-        self.get_paginated_json(&format!(
-            "/corporations/{}/standings/",
-            corporation_id
-        ))
-        .await
+    pub async fn corp_standings(&self, corporation_id: i64) -> Result<Vec<EsiStanding>> {
+        self.get_paginated_json(&format!("/corporations/{corporation_id}/standings/"))
+            .await
     }
 
     /// Fetch corporation titles.
     #[tracing::instrument(skip(self))]
     pub async fn corp_titles(&self, corporation_id: i64) -> Result<Vec<EsiCorpTitle>> {
-        self.get_json(&format!(
-            "/corporations/{}/titles/",
-            corporation_id
-        ))
-        .await
+        self.get_json(&format!("/corporations/{corporation_id}/titles/"))
+            .await
     }
 
     // -----------------------------------------------------------------------
@@ -520,8 +406,7 @@ impl EsiClient {
         corporation_id: i64,
     ) -> Result<Vec<EsiMiningExtraction>> {
         self.get_paginated_json(&format!(
-            "/corporation/{}/mining/extractions/",
-            corporation_id
+            "/corporation/{corporation_id}/mining/extractions/"
         ))
         .await
     }
@@ -532,11 +417,8 @@ impl EsiClient {
         &self,
         corporation_id: i64,
     ) -> Result<Vec<EsiMiningObserver>> {
-        self.get_paginated_json(&format!(
-            "/corporation/{}/mining/observers/",
-            corporation_id
-        ))
-        .await
+        self.get_paginated_json(&format!("/corporation/{corporation_id}/mining/observers/"))
+            .await
     }
 
     /// Fetch mining observer details (paginated).
@@ -547,8 +429,7 @@ impl EsiClient {
         observer_id: i64,
     ) -> Result<Vec<EsiMiningObserverEntry>> {
         self.get_paginated_json(&format!(
-            "/corporation/{}/mining/observers/{}/",
-            corporation_id, observer_id
+            "/corporation/{corporation_id}/mining/observers/{observer_id}/"
         ))
         .await
     }

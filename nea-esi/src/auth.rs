@@ -19,7 +19,7 @@ pub(crate) const SSO_TOKEN_URL: &str = "https://login.eveonline.com/v2/oauth/tok
 // Types
 // ---------------------------------------------------------------------------
 
-/// Credentials for EVE SSO. Debug-safe: client_secret is redacted.
+/// Credentials for EVE SSO. Debug-safe: `client_secret` is redacted.
 #[derive(Debug, Clone)]
 pub enum EsiAppCredentials {
     Web {
@@ -32,6 +32,7 @@ pub enum EsiAppCredentials {
 }
 
 impl EsiAppCredentials {
+    #[must_use]
     pub fn client_id(&self) -> &str {
         match self {
             Self::Web { client_id, .. } | Self::Native { client_id } => client_id,
@@ -66,11 +67,13 @@ pub struct EsiTokens {
 
 impl EsiTokens {
     /// True if the access token has expired.
+    #[must_use]
     pub fn is_expired(&self) -> bool {
         Utc::now() >= self.expires_at
     }
 
     /// True if the access token expires within 60 seconds.
+    #[must_use]
     pub fn needs_refresh(&self) -> bool {
         Utc::now() >= self.expires_at - Duration::seconds(60)
     }
@@ -104,8 +107,8 @@ fn generate_state() -> String {
 
 /// Base64url encode without padding (RFC 7636).
 fn base64_url_encode(input: &[u8]) -> String {
-    use base64::engine::general_purpose::URL_SAFE_NO_PAD;
     use base64::Engine;
+    use base64::engine::general_purpose::URL_SAFE_NO_PAD;
     URL_SAFE_NO_PAD.encode(input)
 }
 
@@ -119,11 +122,7 @@ impl EsiClient {
     /// Returns a `PkceChallenge` containing the URL to redirect the user to,
     /// the code verifier (needed for `exchange_code`), and the state parameter
     /// (should be verified on callback).
-    pub fn authorize_url(
-        &self,
-        redirect_uri: &str,
-        scopes: &[&str],
-    ) -> Result<PkceChallenge> {
+    pub fn authorize_url(&self, redirect_uri: &str, scopes: &[&str]) -> Result<PkceChallenge> {
         let creds = self
             .app_credentials
             .as_ref()
@@ -188,14 +187,12 @@ impl EsiClient {
         let token_resp: TokenResponse = resp
             .json()
             .await
-            .map_err(|e| {
-                EsiError::TokenRefresh(format!("failed to parse token response: {e}"))
-            })?;
+            .map_err(|e| EsiError::TokenRefresh(format!("failed to parse token response: {e}")))?;
 
         Ok(EsiTokens {
             access_token: token_resp.access_token,
             refresh_token: token_resp.refresh_token,
-            expires_at: Utc::now() + Duration::seconds(token_resp.expires_in as i64),
+            expires_at: Utc::now() + Duration::seconds(token_resp.expires_in.cast_signed()),
         })
     }
 
@@ -246,10 +243,10 @@ impl EsiClient {
         // Double-check: another task may have already refreshed while we waited.
         {
             let guard = self.tokens.read().await;
-            if let Some(ref existing) = *guard {
-                if !existing.needs_refresh() {
-                    return Ok(existing.clone());
-                }
+            if let Some(ref existing) = *guard
+                && !existing.needs_refresh()
+            {
+                return Ok(existing.clone());
             }
         }
 
@@ -350,7 +347,10 @@ mod tests {
     fn test_authorize_url_params() {
         let client = EsiClient::with_native_app("test-agent", "my-client-id").unwrap();
         let challenge = client
-            .authorize_url("http://localhost:8080/callback", &["esi-wallet.read_character_wallet.v1"])
+            .authorize_url(
+                "http://localhost:8080/callback",
+                &["esi-wallet.read_character_wallet.v1"],
+            )
             .unwrap();
 
         let parsed = url::Url::parse(&challenge.authorize_url).unwrap();
@@ -418,7 +418,10 @@ mod tests {
             "refresh_token": "abc123refresh"
         }"#;
         let resp: TokenResponse = serde_json::from_str(json).unwrap();
-        assert_eq!(resp.access_token.expose_secret(), "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.test");
+        assert_eq!(
+            resp.access_token.expose_secret(),
+            "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.test"
+        );
         assert_eq!(resp.expires_in, 1199);
         assert_eq!(resp.token_type, "Bearer");
         assert_eq!(resp.refresh_token.expose_secret(), "abc123refresh");

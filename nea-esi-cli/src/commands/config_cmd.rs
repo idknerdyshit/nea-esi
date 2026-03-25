@@ -6,21 +6,25 @@ pub enum ConfigCommand {
     Init,
     /// Show current configuration
     Show,
-    /// Set a configuration value (dot-separated key, e.g. defaults.character_id)
+    /// Set a configuration value (dot-separated key, e.g. `defaults.character_id`)
     Set {
-        /// Key path (e.g. defaults.character_id, app.client_id)
+        /// Key path (e.g. `defaults.character_id`, `app.client_id`)
         key: String,
         /// Value to set
         value: String,
     },
 }
 
-pub async fn execute(ctx: &super::ExecContext, cmd: ConfigCommand) -> anyhow::Result<()> {
+pub fn execute(ctx: &super::ExecContext, cmd: ConfigCommand) -> anyhow::Result<()> {
     match cmd {
         ConfigCommand::Init => {
             let config = Config::default();
             config.save(ctx.config_path.as_ref())?;
-            let path = ctx.config_path.clone().or_else(Config::config_path).unwrap_or_default();
+            let path = ctx
+                .config_path
+                .clone()
+                .or_else(Config::config_path)
+                .unwrap_or_default();
             println!("Config initialized at {}", path.display());
             Ok(())
         }

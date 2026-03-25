@@ -73,7 +73,9 @@ pub enum FleetCommand {
 pub async fn execute(ctx: &super::ExecContext, cmd: FleetCommand) -> anyhow::Result<()> {
     match cmd {
         FleetCommand::MyFleet => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_fleet(cid).await?;
             crate::output::print_value(&result, ctx.format)
         }
@@ -89,7 +91,10 @@ pub async fn execute(ctx: &super::ExecContext, cmd: FleetCommand) -> anyhow::Res
             let result = ctx.client.fleet_wings(fleet_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
-        FleetCommand::Kick { fleet_id, member_id } => {
+        FleetCommand::Kick {
+            fleet_id,
+            member_id,
+        } => {
             ctx.client.kick_fleet_member(fleet_id, member_id).await?;
             println!("Member {member_id} kicked from fleet.");
             Ok(())
@@ -103,8 +108,14 @@ pub async fn execute(ctx: &super::ExecContext, cmd: FleetCommand) -> anyhow::Res
             println!("Wing {wing_id} deleted.");
             Ok(())
         }
-        FleetCommand::RenameWing { fleet_id, wing_id, name } => {
-            ctx.client.rename_fleet_wing(fleet_id, wing_id, &name).await?;
+        FleetCommand::RenameWing {
+            fleet_id,
+            wing_id,
+            name,
+        } => {
+            ctx.client
+                .rename_fleet_wing(fleet_id, wing_id, &name)
+                .await?;
             println!("Wing {wing_id} renamed.");
             Ok(())
         }
@@ -117,8 +128,14 @@ pub async fn execute(ctx: &super::ExecContext, cmd: FleetCommand) -> anyhow::Res
             println!("Squad {squad_id} deleted.");
             Ok(())
         }
-        FleetCommand::RenameSquad { fleet_id, squad_id, name } => {
-            ctx.client.rename_fleet_squad(fleet_id, squad_id, &name).await?;
+        FleetCommand::RenameSquad {
+            fleet_id,
+            squad_id,
+            name,
+        } => {
+            ctx.client
+                .rename_fleet_squad(fleet_id, squad_id, &name)
+                .await?;
             println!("Squad {squad_id} renamed.");
             Ok(())
         }

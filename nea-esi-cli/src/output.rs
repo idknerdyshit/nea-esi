@@ -53,9 +53,9 @@ pub fn print_list<T: Serialize>(items: &[T], format: OutputFormat) -> anyhow::Re
             // Convert to JSON Value array, then render as table
             let values: Vec<serde_json::Value> = items
                 .iter()
-                .map(|item| serde_json::to_value(item))
+                .map(serde_json::to_value)
                 .collect::<Result<_, _>>()?;
-            print_value_table(&values)?;
+            print_value_table(&values);
         }
         OutputFormat::Csv => {
             print_csv(items)?;
@@ -65,22 +65,21 @@ pub fn print_list<T: Serialize>(items: &[T], format: OutputFormat) -> anyhow::Re
 }
 
 /// Render a JSON Value array as a table using tabled.
-fn print_value_table(values: &[serde_json::Value]) -> anyhow::Result<()> {
+fn print_value_table(values: &[serde_json::Value]) {
     if values.is_empty() {
         println!("(no results)");
-        return Ok(());
+        return;
     }
 
     // Extract column headers from the first object
-    let headers: Vec<String> = match &values[0] {
-        serde_json::Value::Object(map) => map.keys().cloned().collect(),
-        _ => {
-            // Not objects, just print as JSON lines
-            for v in values {
-                println!("{v}");
-            }
-            return Ok(());
+    let headers: Vec<String> = if let serde_json::Value::Object(map) = &values[0] {
+        map.keys().cloned().collect()
+    } else {
+        // Not objects, just print as JSON lines
+        for v in values {
+            println!("{v}");
         }
+        return;
     };
 
     let mut builder = tabled::builder::Builder::new();
@@ -88,23 +87,21 @@ fn print_value_table(values: &[serde_json::Value]) -> anyhow::Result<()> {
 
     for value in values {
         if let serde_json::Value::Object(map) = value {
-            let row: Vec<String> = headers
-                .iter()
-                .map(|h| format_cell(map.get(h)))
-                .collect();
+            let row: Vec<String> = headers.iter().map(|h| format_cell(map.get(h))).collect();
             builder.push_record(row);
         }
     }
 
-    let table = builder.build().with(tabled::settings::Style::rounded()).to_string();
+    let table = builder
+        .build()
+        .with(tabled::settings::Style::rounded())
+        .to_string();
     println!("{table}");
-    Ok(())
 }
 
 fn format_cell(value: Option<&serde_json::Value>) -> String {
     match value {
-        None => String::new(),
-        Some(serde_json::Value::Null) => String::new(),
+        None | Some(serde_json::Value::Null) => String::new(),
         Some(serde_json::Value::String(s)) => s.clone(),
         Some(serde_json::Value::Number(n)) => n.to_string(),
         Some(serde_json::Value::Bool(b)) => b.to_string(),
@@ -135,7 +132,7 @@ fn print_csv<T: Serialize>(items: &[T]) -> anyhow::Result<()> {
 }
 
 /// Print a simple scalar (like wallet balance).
-pub fn print_scalar<T: std::fmt::Display>(value: T, label: &str, format: OutputFormat) -> anyhow::Result<()> {
+pub fn print_scalar<T: std::fmt::Display>(value: T, label: &str, format: OutputFormat) {
     match format {
         OutputFormat::Json => {
             println!("{}", serde_json::json!({ label: value.to_string() }));
@@ -144,5 +141,4 @@ pub fn print_scalar<T: std::fmt::Display>(value: T, label: &str, format: OutputF
             println!("{label}: {value}");
         }
     }
-    Ok(())
 }

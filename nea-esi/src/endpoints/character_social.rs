@@ -1,9 +1,8 @@
 use crate::{
-    EsiCalendarEvent, EsiCalendarEventDetail, EsiCharacterOrder,
-    EsiClient, EsiContact, EsiContactLabel, EsiContract, EsiContractBid, EsiContractItem,
-    EsiError, EsiFitting, EsiMailBody, EsiMailHeader, EsiMailLabels, EsiMailUpdate, EsiMailingList,
-    EsiNewFitting, EsiNewFittingResponse, EsiNewMail, EsiNewMailLabel, EsiNotification,
-    EsiSearchResult, Result,
+    EsiCalendarEvent, EsiCalendarEventDetail, EsiCharacterOrder, EsiClient, EsiContact,
+    EsiContactLabel, EsiContract, EsiContractBid, EsiContractItem, EsiError, EsiFitting,
+    EsiMailBody, EsiMailHeader, EsiMailLabels, EsiMailUpdate, EsiMailingList, EsiNewFitting,
+    EsiNewFittingResponse, EsiNewMail, EsiNewMailLabel, EsiNotification, EsiSearchResult, Result,
 };
 
 impl EsiClient {
@@ -13,15 +12,9 @@ impl EsiClient {
 
     /// Fetch a character's contracts (paginated).
     #[tracing::instrument(skip(self))]
-    pub async fn character_contracts(
-        &self,
-        character_id: i64,
-    ) -> Result<Vec<EsiContract>> {
-        self.get_paginated_json(&format!(
-            "/characters/{}/contracts/",
-            character_id
-        ))
-        .await
+    pub async fn character_contracts(&self, character_id: i64) -> Result<Vec<EsiContract>> {
+        self.get_paginated_json(&format!("/characters/{character_id}/contracts/"))
+            .await
     }
 
     /// Fetch items in a specific contract.
@@ -32,8 +25,7 @@ impl EsiClient {
         contract_id: i64,
     ) -> Result<Vec<EsiContractItem>> {
         self.get_json(&format!(
-            "/characters/{}/contracts/{}/items/",
-            character_id, contract_id
+            "/characters/{character_id}/contracts/{contract_id}/items/"
         ))
         .await
     }
@@ -46,8 +38,7 @@ impl EsiClient {
         contract_id: i64,
     ) -> Result<Vec<EsiContractBid>> {
         self.get_json(&format!(
-            "/characters/{}/contracts/{}/bids/",
-            character_id, contract_id
+            "/characters/{character_id}/contracts/{contract_id}/bids/"
         ))
         .await
     }
@@ -58,11 +49,8 @@ impl EsiClient {
 
     /// Fetch a character's active market orders.
     #[tracing::instrument(skip(self))]
-    pub async fn character_orders(
-        &self,
-        character_id: i64,
-    ) -> Result<Vec<EsiCharacterOrder>> {
-        self.get_json(&format!("/characters/{}/orders/", character_id))
+    pub async fn character_orders(&self, character_id: i64) -> Result<Vec<EsiCharacterOrder>> {
+        self.get_json(&format!("/characters/{character_id}/orders/"))
             .await
     }
 
@@ -72,11 +60,8 @@ impl EsiClient {
         &self,
         character_id: i64,
     ) -> Result<Vec<EsiCharacterOrder>> {
-        self.get_paginated_json(&format!(
-            "/characters/{}/orders/history/",
-            character_id
-        ))
-        .await
+        self.get_paginated_json(&format!("/characters/{character_id}/orders/history/"))
+            .await
     }
 
     // -----------------------------------------------------------------------
@@ -85,37 +70,25 @@ impl EsiClient {
 
     /// Fetch a character's saved fittings.
     #[tracing::instrument(skip(self))]
-    pub async fn character_fittings(
-        &self,
-        character_id: i64,
-    ) -> Result<Vec<EsiFitting>> {
-        self.get_json(&format!("/characters/{}/fittings/", character_id))
+    pub async fn character_fittings(&self, character_id: i64) -> Result<Vec<EsiFitting>> {
+        self.get_json(&format!("/characters/{character_id}/fittings/"))
             .await
     }
 
     /// Create a new fitting for a character. Returns the new fitting ID.
     #[tracing::instrument(skip(self, fitting))]
-    pub async fn create_fitting(
-        &self,
-        character_id: i64,
-        fitting: &EsiNewFitting,
-    ) -> Result<i64> {
+    pub async fn create_fitting(&self, character_id: i64, fitting: &EsiNewFitting) -> Result<i64> {
         let result: EsiNewFittingResponse = self
-            .post_json(&format!("/characters/{}/fittings/", character_id), fitting)
+            .post_json(&format!("/characters/{character_id}/fittings/"), fitting)
             .await?;
         Ok(result.fitting_id)
     }
 
     /// Delete a fitting. Returns `()` on success (204).
     #[tracing::instrument(skip(self))]
-    pub async fn delete_fitting(
-        &self,
-        character_id: i64,
-        fitting_id: i64,
-    ) -> Result<()> {
+    pub async fn delete_fitting(&self, character_id: i64, fitting_id: i64) -> Result<()> {
         self.delete_path(&format!(
-            "/characters/{}/fittings/{}/",
-            character_id, fitting_id
+            "/characters/{character_id}/fittings/{fitting_id}/"
         ))
         .await
     }
@@ -135,7 +108,7 @@ impl EsiClient {
     ) -> Result<Vec<EsiMailHeader>> {
         match labels {
             Some(ids) if !ids.is_empty() => {
-                let label_str: Vec<String> = ids.iter().map(|id| id.to_string()).collect();
+                let label_str: Vec<String> = ids.iter().map(ToString::to_string).collect();
                 self.get_json(&format!(
                     "/characters/{}/mail/?labels={}",
                     character_id,
@@ -144,7 +117,7 @@ impl EsiClient {
                 .await
             }
             _ => {
-                self.get_json(&format!("/characters/{}/mail/", character_id))
+                self.get_json(&format!("/characters/{character_id}/mail/"))
                     .await
             }
         }
@@ -158,8 +131,7 @@ impl EsiClient {
         last_mail_id: i64,
     ) -> Result<Vec<EsiMailHeader>> {
         self.get_json(&format!(
-            "/characters/{}/mail/?last_mail_id={}",
-            character_id, last_mail_id
+            "/characters/{character_id}/mail/?last_mail_id={last_mail_id}"
         ))
         .await
     }
@@ -171,35 +143,22 @@ impl EsiClient {
         character_id: i64,
         mail_id: i64,
     ) -> Result<EsiMailBody> {
-        self.get_json(&format!(
-            "/characters/{}/mail/{}/",
-            character_id, mail_id
-        ))
-        .await
+        self.get_json(&format!("/characters/{character_id}/mail/{mail_id}/"))
+            .await
     }
 
     /// Send a mail. Returns the new mail ID.
     #[tracing::instrument(skip(self, mail))]
-    pub async fn send_mail(
-        &self,
-        character_id: i64,
-        mail: &EsiNewMail,
-    ) -> Result<i32> {
-        self.post_json(&format!("/characters/{}/mail/", character_id), mail)
+    pub async fn send_mail(&self, character_id: i64, mail: &EsiNewMail) -> Result<i32> {
+        self.post_json(&format!("/characters/{character_id}/mail/"), mail)
             .await
     }
 
     /// Fetch a character's mail labels.
     #[tracing::instrument(skip(self))]
-    pub async fn character_mail_labels(
-        &self,
-        character_id: i64,
-    ) -> Result<EsiMailLabels> {
-        self.get_json(&format!(
-            "/characters/{}/mail/labels/",
-            character_id
-        ))
-        .await
+    pub async fn character_mail_labels(&self, character_id: i64) -> Result<EsiMailLabels> {
+        self.get_json(&format!("/characters/{character_id}/mail/labels/"))
+            .await
     }
 
     /// Create a new mail label. Returns the label ID.
@@ -209,52 +168,31 @@ impl EsiClient {
         character_id: i64,
         label: &EsiNewMailLabel,
     ) -> Result<i32> {
-        self.post_json(
-            &format!("/characters/{}/mail/labels/", character_id),
-            label,
-        )
-        .await
+        self.post_json(&format!("/characters/{character_id}/mail/labels/"), label)
+            .await
     }
 
     /// Delete a mail label.
     #[tracing::instrument(skip(self))]
-    pub async fn delete_mail_label(
-        &self,
-        character_id: i64,
-        label_id: i32,
-    ) -> Result<()> {
+    pub async fn delete_mail_label(&self, character_id: i64, label_id: i32) -> Result<()> {
         self.delete_path(&format!(
-            "/characters/{}/mail/labels/{}/",
-            character_id, label_id
+            "/characters/{character_id}/mail/labels/{label_id}/"
         ))
         .await
     }
 
     /// Fetch a character's mailing lists (authenticated).
     #[tracing::instrument(skip(self))]
-    pub async fn character_mailing_lists(
-        &self,
-        character_id: i64,
-    ) -> Result<Vec<EsiMailingList>> {
-        self.get_json(&format!(
-            "/characters/{}/mail/lists/",
-            character_id
-        ))
-        .await
+    pub async fn character_mailing_lists(&self, character_id: i64) -> Result<Vec<EsiMailingList>> {
+        self.get_json(&format!("/characters/{character_id}/mail/lists/"))
+            .await
     }
 
     /// Delete a mail.
     #[tracing::instrument(skip(self))]
-    pub async fn delete_mail(
-        &self,
-        character_id: i64,
-        mail_id: i64,
-    ) -> Result<()> {
-        self.delete_path(&format!(
-            "/characters/{}/mail/{}/",
-            character_id, mail_id
-        ))
-        .await
+    pub async fn delete_mail(&self, character_id: i64, mail_id: i64) -> Result<()> {
+        self.delete_path(&format!("/characters/{character_id}/mail/{mail_id}/"))
+            .await
     }
 
     /// Update mail metadata (read status, labels).
@@ -266,7 +204,7 @@ impl EsiClient {
         update: &EsiMailUpdate,
     ) -> Result<()> {
         self.put_json(
-            &format!("/characters/{}/mail/{}/", character_id, mail_id),
+            &format!("/characters/{character_id}/mail/{mail_id}/"),
             update,
         )
         .await
@@ -278,15 +216,9 @@ impl EsiClient {
 
     /// Fetch a character's notifications.
     #[tracing::instrument(skip(self))]
-    pub async fn character_notifications(
-        &self,
-        character_id: i64,
-    ) -> Result<Vec<EsiNotification>> {
-        self.get_json(&format!(
-            "/characters/{}/notifications/",
-            character_id
-        ))
-        .await
+    pub async fn character_notifications(&self, character_id: i64) -> Result<Vec<EsiNotification>> {
+        self.get_json(&format!("/characters/{character_id}/notifications/"))
+            .await
     }
 
     // -----------------------------------------------------------------------
@@ -295,15 +227,9 @@ impl EsiClient {
 
     /// Fetch a character's contacts (paginated).
     #[tracing::instrument(skip(self))]
-    pub async fn character_contacts(
-        &self,
-        character_id: i64,
-    ) -> Result<Vec<EsiContact>> {
-        self.get_paginated_json(&format!(
-            "/characters/{}/contacts/",
-            character_id
-        ))
-        .await
+    pub async fn character_contacts(&self, character_id: i64) -> Result<Vec<EsiContact>> {
+        self.get_paginated_json(&format!("/characters/{character_id}/contacts/"))
+            .await
     }
 
     /// Fetch a character's contact labels.
@@ -312,11 +238,8 @@ impl EsiClient {
         &self,
         character_id: i64,
     ) -> Result<Vec<EsiContactLabel>> {
-        self.get_json(&format!(
-            "/characters/{}/contacts/labels/",
-            character_id
-        ))
-        .await
+        self.get_json(&format!("/characters/{character_id}/contacts/labels/"))
+            .await
     }
 
     /// Add contacts to a character. Returns added contact IDs.
@@ -353,17 +276,10 @@ impl EsiClient {
 
     /// Delete contacts from a character.
     #[tracing::instrument(skip(self, contact_ids))]
-    pub async fn delete_contacts(
-        &self,
-        character_id: i64,
-        contact_ids: &[i64],
-    ) -> Result<()> {
-        let base = format!(
-            "{}/characters/{}/contacts/",
-            self.base_url, character_id
-        );
+    pub async fn delete_contacts(&self, character_id: i64, contact_ids: &[i64]) -> Result<()> {
+        let base = format!("{}/characters/{}/contacts/", self.base_url, character_id);
         let mut url = url::Url::parse(&base)
-            .map_err(|e| EsiError::Internal(format!("failed to build URL: {}", e)))?;
+            .map_err(|e| EsiError::Internal(format!("failed to build URL: {e}")))?;
         for &id in contact_ids {
             url.query_pairs_mut()
                 .append_pair("contact_ids", &id.to_string());
@@ -387,17 +303,13 @@ impl EsiClient {
         match from_event {
             Some(id) => {
                 self.get_json(&format!(
-                    "/characters/{}/calendar/?from_event={}",
-                    character_id, id
+                    "/characters/{character_id}/calendar/?from_event={id}"
                 ))
                 .await
             }
             None => {
-                self.get_json(&format!(
-                    "/characters/{}/calendar/",
-                    character_id
-                ))
-                .await
+                self.get_json(&format!("/characters/{character_id}/calendar/"))
+                    .await
             }
         }
     }
@@ -409,11 +321,8 @@ impl EsiClient {
         character_id: i64,
         event_id: i64,
     ) -> Result<EsiCalendarEventDetail> {
-        self.get_json(&format!(
-            "/characters/{}/calendar/{}/",
-            character_id, event_id
-        ))
-        .await
+        self.get_json(&format!("/characters/{character_id}/calendar/{event_id}/"))
+            .await
     }
 
     /// Set a character's response to a calendar event.
@@ -425,7 +334,7 @@ impl EsiClient {
         response: &str,
     ) -> Result<()> {
         self.put_json(
-            &format!("/characters/{}/calendar/{}/", character_id, event_id),
+            &format!("/characters/{character_id}/calendar/{event_id}/"),
             &crate::EsiEventResponse {
                 response: response.to_string(),
             },
@@ -441,8 +350,7 @@ impl EsiClient {
         event_id: i64,
     ) -> Result<Vec<crate::EsiEventAttendee>> {
         self.get_json(&format!(
-            "/characters/{}/calendar/{}/attendees/",
-            character_id, event_id
+            "/characters/{character_id}/calendar/{event_id}/attendees/"
         ))
         .await
     }
@@ -472,7 +380,7 @@ impl EsiClient {
                 ("strict", &strict_str),
             ],
         )
-        .map_err(|e| EsiError::Internal(format!("failed to build search URL: {}", e)))?;
+        .map_err(|e| EsiError::Internal(format!("failed to build search URL: {e}")))?;
 
         self.request(url.as_str())
             .await?
@@ -492,7 +400,7 @@ impl EsiClient {
     ) -> Result<EsiSearchResult> {
         let strict_str = strict.to_string();
         let url = self.build_url(
-            &format!("/characters/{}/search/", character_id),
+            &format!("/characters/{character_id}/search/"),
             &[
                 ("search", search),
                 ("categories", categories),

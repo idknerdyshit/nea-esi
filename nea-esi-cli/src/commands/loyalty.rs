@@ -12,7 +12,9 @@ pub enum LoyaltyCommand {
 pub async fn execute(ctx: &super::ExecContext, cmd: LoyaltyCommand) -> anyhow::Result<()> {
     match cmd {
         LoyaltyCommand::Points => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_loyalty_points(cid).await?;
             crate::output::print_list(&result, ctx.format)
         }

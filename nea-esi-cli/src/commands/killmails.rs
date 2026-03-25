@@ -25,12 +25,16 @@ pub async fn execute(ctx: &super::ExecContext, cmd: KillmailsCommand) -> anyhow:
             crate::output::print_value(&result, ctx.format)
         }
         KillmailsCommand::Character => {
-            let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+            let cid = ctx
+                .character_id
+                .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
             let result = ctx.client.character_killmails(cid).await?;
             crate::output::print_list(&result, ctx.format)
         }
         KillmailsCommand::Corporation => {
-            let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
+            let corp_id = ctx
+                .corporation_id
+                .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corporation_killmails(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }

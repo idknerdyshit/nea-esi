@@ -10,7 +10,9 @@ pub enum PiCommand {
 }
 
 pub async fn execute(ctx: &super::ExecContext, cmd: PiCommand) -> anyhow::Result<()> {
-    let cid = ctx.character_id.ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
+    let cid = ctx
+        .character_id
+        .ok_or_else(|| anyhow::anyhow!("No character ID specified"))?;
     match cmd {
         PiCommand::Planets => {
             let result = ctx.client.character_planets(cid).await?;

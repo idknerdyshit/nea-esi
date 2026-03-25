@@ -105,6 +105,7 @@ pub enum UniverseCommand {
     SystemKills,
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn execute(ctx: &super::ExecContext, cmd: UniverseCommand) -> anyhow::Result<()> {
     match cmd {
         UniverseCommand::Type { type_id } => {

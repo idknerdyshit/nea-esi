@@ -1,9 +1,9 @@
 use crate::{
     EsiClient, EsiContract, EsiContractBid, EsiContractItem, EsiDogmaAttribute, EsiDogmaEffect,
-    EsiDynamicItem, EsiFwCharacterLeaderboards, EsiFwCorporationLeaderboards,
-    EsiFwFactionStats, EsiFwLeaderboards, EsiFwSystem, EsiFwWar, EsiIncursion,
-    EsiIndustryFacility, EsiIndustrySystem, EsiInsurancePrice, EsiKillmailRef,
-    EsiLoyaltyStoreOffer, EsiNewMailWindow, EsiServerStatus, EsiWar, Result,
+    EsiDynamicItem, EsiFwCharacterLeaderboards, EsiFwCorporationLeaderboards, EsiFwFactionStats,
+    EsiFwLeaderboards, EsiFwSystem, EsiFwWar, EsiIncursion, EsiIndustryFacility, EsiIndustrySystem,
+    EsiInsurancePrice, EsiKillmailRef, EsiLoyaltyStoreOffer, EsiNewMailWindow, EsiServerStatus,
+    EsiWar, Result,
 };
 
 impl EsiClient {
@@ -14,21 +14,20 @@ impl EsiClient {
     /// Fetch a dogma attribute by ID.
     #[tracing::instrument(skip(self))]
     pub async fn get_dogma_attribute(&self, attribute_id: i32) -> Result<EsiDogmaAttribute> {
-        self.get_json(&format!("/dogma/attributes/{}/", attribute_id))
+        self.get_json(&format!("/dogma/attributes/{attribute_id}/"))
             .await
     }
 
     /// Fetch a dogma effect by ID.
     #[tracing::instrument(skip(self))]
     pub async fn get_dogma_effect(&self, effect_id: i32) -> Result<EsiDogmaEffect> {
-        self.get_json(&format!("/dogma/effects/{}/", effect_id))
-            .await
+        self.get_json(&format!("/dogma/effects/{effect_id}/")).await
     }
 
     /// Fetch a mutated (dynamic) item's stats.
     #[tracing::instrument(skip(self))]
     pub async fn get_dynamic_item(&self, type_id: i32, item_id: i64) -> Result<EsiDynamicItem> {
-        self.get_json(&format!("/dogma/dynamic/items/{}/{}/", type_id, item_id))
+        self.get_json(&format!("/dogma/dynamic/items/{type_id}/{item_id}/"))
             .await
     }
 
@@ -71,7 +70,7 @@ impl EsiClient {
     pub async fn list_war_ids(&self, max_war_id: Option<i32>) -> Result<Vec<i32>> {
         match max_war_id {
             Some(id) => {
-                self.get_paginated_json(&format!("/wars/?max_war_id={}", id))
+                self.get_paginated_json(&format!("/wars/?max_war_id={id}"))
                     .await
             }
             None => self.get_paginated_json("/wars/").await,
@@ -81,13 +80,13 @@ impl EsiClient {
     /// Fetch war details.
     #[tracing::instrument(skip(self))]
     pub async fn get_war(&self, war_id: i32) -> Result<EsiWar> {
-        self.get_json(&format!("/wars/{}/", war_id)).await
+        self.get_json(&format!("/wars/{war_id}/")).await
     }
 
     /// Fetch killmails for a war (paginated).
     #[tracing::instrument(skip(self))]
     pub async fn war_killmails(&self, war_id: i32) -> Result<Vec<EsiKillmailRef>> {
-        self.get_paginated_json(&format!("/wars/{}/killmails/", war_id))
+        self.get_paginated_json(&format!("/wars/{war_id}/killmails/"))
             .await
     }
 
@@ -171,11 +170,8 @@ impl EsiClient {
         &self,
         corporation_id: i64,
     ) -> Result<Vec<EsiLoyaltyStoreOffer>> {
-        self.get_json(&format!(
-            "/loyalty/stores/{}/offers/",
-            corporation_id
-        ))
-        .await
+        self.get_json(&format!("/loyalty/stores/{corporation_id}/offers/"))
+            .await
     }
 
     // -----------------------------------------------------------------------
@@ -201,34 +197,22 @@ impl EsiClient {
     /// Fetch public contracts in a region (paginated).
     #[tracing::instrument(skip(self))]
     pub async fn public_contracts(&self, region_id: i32) -> Result<Vec<EsiContract>> {
-        self.get_paginated_json(&format!("/contracts/public/{}/", region_id))
+        self.get_paginated_json(&format!("/contracts/public/{region_id}/"))
             .await
     }
 
     /// Fetch bids on a public contract (paginated).
     #[tracing::instrument(skip(self))]
-    pub async fn public_contract_bids(
-        &self,
-        contract_id: i64,
-    ) -> Result<Vec<EsiContractBid>> {
-        self.get_paginated_json(&format!(
-            "/contracts/public/bids/{}/",
-            contract_id
-        ))
-        .await
+    pub async fn public_contract_bids(&self, contract_id: i64) -> Result<Vec<EsiContractBid>> {
+        self.get_paginated_json(&format!("/contracts/public/bids/{contract_id}/"))
+            .await
     }
 
     /// Fetch items in a public contract (paginated).
     #[tracing::instrument(skip(self))]
-    pub async fn public_contract_items(
-        &self,
-        contract_id: i64,
-    ) -> Result<Vec<EsiContractItem>> {
-        self.get_paginated_json(&format!(
-            "/contracts/public/items/{}/",
-            contract_id
-        ))
-        .await
+    pub async fn public_contract_items(&self, contract_id: i64) -> Result<Vec<EsiContractItem>> {
+        self.get_paginated_json(&format!("/contracts/public/items/{contract_id}/"))
+            .await
     }
 
     // -----------------------------------------------------------------------

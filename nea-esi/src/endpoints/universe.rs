@@ -1,11 +1,11 @@
 use tracing::debug;
 
 use crate::{
-    EsiAncestry, EsiAsteroidBelt, EsiBloodline, EsiCategoryInfo, EsiClient,
-    EsiConstellationInfo, EsiError, EsiFaction, EsiGraphic, EsiGroupInfo, EsiMoon, EsiPlanet,
-    EsiRace, EsiRegionInfo, EsiResolvedIds, EsiResolvedName, EsiSchematic, EsiSolarSystemInfo,
-    EsiSovereigntyCampaign, EsiSovereigntyMap, EsiSovereigntyStructure, EsiStar, EsiStargateInfo,
-    EsiStationInfo, EsiStructureInfo, EsiSystemJumps, EsiSystemKills, EsiTypeInfo, Result,
+    EsiAncestry, EsiAsteroidBelt, EsiBloodline, EsiCategoryInfo, EsiClient, EsiConstellationInfo,
+    EsiError, EsiFaction, EsiGraphic, EsiGroupInfo, EsiMoon, EsiPlanet, EsiRace, EsiRegionInfo,
+    EsiResolvedIds, EsiResolvedName, EsiSchematic, EsiSolarSystemInfo, EsiSovereigntyCampaign,
+    EsiSovereigntyMap, EsiSovereigntyStructure, EsiStar, EsiStargateInfo, EsiStationInfo,
+    EsiStructureInfo, EsiSystemJumps, EsiSystemKills, EsiTypeInfo, Result,
 };
 
 use super::{RESOLVE_IDS_CHUNK_SIZE, RESOLVE_NAMES_CHUNK_SIZE};
@@ -27,8 +27,7 @@ impl EsiClient {
         let mut all_names = Vec::with_capacity(ids.len());
 
         for chunk in ids.chunks(RESOLVE_NAMES_CHUNK_SIZE) {
-            let names: Vec<EsiResolvedName> =
-                self.post_json("/universe/names/", &chunk).await?;
+            let names: Vec<EsiResolvedName> = self.post_json("/universe/names/", &chunk).await?;
             all_names.extend(names);
         }
 
@@ -48,8 +47,7 @@ impl EsiClient {
         let mut merged = EsiResolvedIds::default();
 
         for chunk in names.chunks(RESOLVE_IDS_CHUNK_SIZE) {
-            let resolved: EsiResolvedIds =
-                self.post_json("/universe/ids/", &chunk).await?;
+            let resolved: EsiResolvedIds = self.post_json("/universe/ids/", &chunk).await?;
             merged.merge(resolved);
         }
 
@@ -64,7 +62,7 @@ impl EsiClient {
     /// Fetch info about a player-owned structure.
     #[tracing::instrument(skip(self))]
     pub async fn get_structure(&self, structure_id: i64) -> Result<EsiStructureInfo> {
-        self.get_json(&format!("/universe/structures/{}/", structure_id))
+        self.get_json(&format!("/universe/structures/{structure_id}/"))
             .await
     }
 
@@ -75,7 +73,7 @@ impl EsiClient {
     /// Fetch detailed information about an inventory type.
     #[tracing::instrument(skip(self))]
     pub async fn get_type(&self, type_id: i32) -> Result<EsiTypeInfo> {
-        self.get_json(&format!("/universe/types/{}/", type_id)).await
+        self.get_json(&format!("/universe/types/{type_id}/")).await
     }
 
     /// List all type IDs (paginated).
@@ -87,48 +85,49 @@ impl EsiClient {
     /// Fetch inventory group info.
     #[tracing::instrument(skip(self))]
     pub async fn get_group(&self, group_id: i32) -> Result<EsiGroupInfo> {
-        self.get_json(&format!("/universe/groups/{}/", group_id)).await
+        self.get_json(&format!("/universe/groups/{group_id}/"))
+            .await
     }
 
     /// Fetch inventory category info.
     #[tracing::instrument(skip(self))]
     pub async fn get_category(&self, category_id: i32) -> Result<EsiCategoryInfo> {
-        self.get_json(&format!("/universe/categories/{}/", category_id))
+        self.get_json(&format!("/universe/categories/{category_id}/"))
             .await
     }
 
     /// Fetch solar system info.
     #[tracing::instrument(skip(self))]
     pub async fn get_system(&self, system_id: i32) -> Result<EsiSolarSystemInfo> {
-        self.get_json(&format!("/universe/systems/{}/", system_id))
+        self.get_json(&format!("/universe/systems/{system_id}/"))
             .await
     }
 
     /// Fetch constellation info.
     #[tracing::instrument(skip(self))]
     pub async fn get_constellation(&self, constellation_id: i32) -> Result<EsiConstellationInfo> {
-        self.get_json(&format!("/universe/constellations/{}/", constellation_id))
+        self.get_json(&format!("/universe/constellations/{constellation_id}/"))
             .await
     }
 
     /// Fetch region info.
     #[tracing::instrument(skip(self))]
     pub async fn get_region(&self, region_id: i32) -> Result<EsiRegionInfo> {
-        self.get_json(&format!("/universe/regions/{}/", region_id))
+        self.get_json(&format!("/universe/regions/{region_id}/"))
             .await
     }
 
     /// Fetch NPC station info.
     #[tracing::instrument(skip(self))]
     pub async fn get_station(&self, station_id: i32) -> Result<EsiStationInfo> {
-        self.get_json(&format!("/universe/stations/{}/", station_id))
+        self.get_json(&format!("/universe/stations/{station_id}/"))
             .await
     }
 
     /// Fetch stargate info.
     #[tracing::instrument(skip(self))]
     pub async fn get_stargate(&self, stargate_id: i32) -> Result<EsiStargateInfo> {
-        self.get_json(&format!("/universe/stargates/{}/", stargate_id))
+        self.get_json(&format!("/universe/stargates/{stargate_id}/"))
             .await
     }
 
@@ -173,12 +172,9 @@ impl EsiClient {
         avoid: &[i32],
         connections: Option<&[[i32; 2]]>,
     ) -> Result<Vec<i32>> {
-        let base = format!(
-            "{}/route/{}/{}/",
-            self.base_url, origin, destination
-        );
+        let base = format!("{}/route/{}/{}/", self.base_url, origin, destination);
         let mut url = url::Url::parse(&base)
-            .map_err(|e| EsiError::Internal(format!("failed to build route URL: {}", e)))?;
+            .map_err(|e| EsiError::Internal(format!("failed to build route URL: {e}")))?;
 
         if let Some(f) = flag {
             url.query_pairs_mut().append_pair("flag", f);
@@ -189,10 +185,8 @@ impl EsiClient {
         }
         if let Some(conns) = connections {
             for conn in conns {
-                url.query_pairs_mut().append_pair(
-                    "connections",
-                    &format!("{}|{}", conn[0], conn[1]),
-                );
+                url.query_pairs_mut()
+                    .append_pair("connections", &format!("{}|{}", conn[0], conn[1]));
             }
         }
 
@@ -216,11 +210,8 @@ impl EsiClient {
     /// Fetch asteroid belt info.
     #[tracing::instrument(skip(self))]
     pub async fn universe_asteroid_belt(&self, asteroid_belt_id: i32) -> Result<EsiAsteroidBelt> {
-        self.get_json(&format!(
-            "/universe/asteroid_belts/{}/",
-            asteroid_belt_id
-        ))
-        .await
+        self.get_json(&format!("/universe/asteroid_belts/{asteroid_belt_id}/"))
+            .await
     }
 
     /// Fetch all bloodlines.
@@ -256,7 +247,7 @@ impl EsiClient {
     /// Fetch graphic info.
     #[tracing::instrument(skip(self))]
     pub async fn universe_graphic(&self, graphic_id: i32) -> Result<EsiGraphic> {
-        self.get_json(&format!("/universe/graphics/{}/", graphic_id))
+        self.get_json(&format!("/universe/graphics/{graphic_id}/"))
             .await
     }
 
@@ -269,13 +260,13 @@ impl EsiClient {
     /// Fetch moon info.
     #[tracing::instrument(skip(self))]
     pub async fn universe_moon(&self, moon_id: i32) -> Result<EsiMoon> {
-        self.get_json(&format!("/universe/moons/{}/", moon_id)).await
+        self.get_json(&format!("/universe/moons/{moon_id}/")).await
     }
 
     /// Fetch planet info (universe data, not PI).
     #[tracing::instrument(skip(self))]
     pub async fn universe_planet(&self, planet_id: i32) -> Result<EsiPlanet> {
-        self.get_json(&format!("/universe/planets/{}/", planet_id))
+        self.get_json(&format!("/universe/planets/{planet_id}/"))
             .await
     }
 
@@ -294,17 +285,14 @@ impl EsiClient {
     /// Fetch PI schematic info.
     #[tracing::instrument(skip(self))]
     pub async fn universe_schematic(&self, schematic_id: i32) -> Result<EsiSchematic> {
-        self.get_json(&format!(
-            "/universe/schematics/{}/",
-            schematic_id
-        ))
-        .await
+        self.get_json(&format!("/universe/schematics/{schematic_id}/"))
+            .await
     }
 
     /// Fetch star info.
     #[tracing::instrument(skip(self))]
     pub async fn universe_star(&self, star_id: i32) -> Result<EsiStar> {
-        self.get_json(&format!("/universe/stars/{}/", star_id)).await
+        self.get_json(&format!("/universe/stars/{star_id}/")).await
     }
 
     /// List all public structure IDs.
