@@ -13,7 +13,7 @@ use crate::{EsiClient, EsiError, Result};
 // ---------------------------------------------------------------------------
 
 const SSO_AUTH_URL: &str = "https://login.eveonline.com/v2/oauth/authorize";
-const SSO_TOKEN_URL: &str = "https://login.eveonline.com/v2/oauth/token";
+pub(crate) const SSO_TOKEN_URL: &str = "https://login.eveonline.com/v2/oauth/token";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -165,11 +165,11 @@ impl EsiClient {
 
         let request = if let EsiAppCredentials::Web { client_secret, .. } = creds {
             self.client
-                .post(SSO_TOKEN_URL)
+                .post(&self.sso_token_url)
                 .form(form_params)
                 .basic_auth(creds.client_id(), Some(client_secret.expose_secret()))
         } else {
-            self.client.post(SSO_TOKEN_URL).form(form_params)
+            self.client.post(&self.sso_token_url).form(form_params)
         };
 
         let resp = request
@@ -227,27 +227,37 @@ impl EsiClient {
     }
 
     /// Refresh the access token using the stored refresh token.
+    ///
+    /// Uses a dedicated mutex to serialize refresh operations, preventing
+    /// concurrent callers from racing on the same refresh token.
     pub async fn refresh_token(&self) -> Result<EsiTokens> {
         let creds = self
             .app_credentials
             .as_ref()
             .ok_or_else(|| EsiError::Auth("no app credentials configured".into()))?;
 
-        // Take write lock — prevents concurrent refresh storms.
-        let guard = self.tokens.write().await;
+        // Serialize all refresh attempts — only one network call at a time.
+        let _refresh_guard = self.refresh_mutex.lock().await;
 
-        // Re-check: another task may have already refreshed while we waited.
-        if let Some(ref existing) = *guard
-            && !existing.needs_refresh()
+        // Double-check: another task may have already refreshed while we waited.
         {
-            return Ok(existing.clone());
+            let guard = self.tokens.read().await;
+            if let Some(ref existing) = *guard {
+                if !existing.needs_refresh() {
+                    return Ok(existing.clone());
+                }
+            }
         }
 
-        let current_refresh = guard
-            .as_ref()
-            .ok_or_else(|| EsiError::TokenRefresh("no tokens to refresh".into()))?
-            .refresh_token
-            .clone();
+        // Read the current refresh token (read lock, released quickly).
+        let current_refresh = {
+            let guard = self.tokens.read().await;
+            guard
+                .as_ref()
+                .ok_or_else(|| EsiError::TokenRefresh("no tokens to refresh".into()))?
+                .refresh_token
+                .clone()
+        };
 
         let client_id = creds.client_id().to_string();
         let form = [
@@ -256,8 +266,8 @@ impl EsiClient {
             ("refresh_token", current_refresh.expose_secret().to_string()),
         ];
 
-        // Drop guard so token_request can proceed.
-        drop(guard);
+        // Network call happens with mutex held (serialized) but RwLock released
+        // (so other tasks can still read the current token for in-flight requests).
         let tokens = self.token_request(&form, "token refresh").await?;
         *self.tokens.write().await = Some(tokens.clone());
         debug!("token refresh complete");
@@ -333,7 +343,7 @@ mod tests {
 
     #[test]
     fn test_authorize_url_params() {
-        let client = EsiClient::with_native_app("test-agent", "my-client-id");
+        let client = EsiClient::with_native_app("test-agent", "my-client-id").unwrap();
         let challenge = client
             .authorize_url("http://localhost:8080/callback", &["esi-wallet.read_character_wallet.v1"])
             .unwrap();
