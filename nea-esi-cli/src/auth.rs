@@ -1,5 +1,4 @@
 use nea_esi::{EsiClient, EsiTokens};
-use secrecy::ExposeSecret;
 use url::Url;
 
 use crate::config::Config;

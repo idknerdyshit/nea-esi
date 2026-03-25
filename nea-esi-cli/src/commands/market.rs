@@ -67,7 +67,7 @@ pub async fn execute(ctx: &super::ExecContext, cmd: MarketCommand) -> anyhow::Re
             let result = ctx.client.get_market_group(market_group_id).await?;
             crate::output::print_value(&result, ctx.format)
         }
-        MarketCommand::StructureOrders { structure_id, order_type } => {
+        MarketCommand::StructureOrders { structure_id, order_type: _ } => {
             let result = ctx.client.structure_orders(structure_id).await?;
             crate::output::print_list(&result, ctx.format)
         }

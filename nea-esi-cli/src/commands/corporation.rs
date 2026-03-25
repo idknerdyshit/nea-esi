@@ -155,7 +155,7 @@ pub async fn execute(ctx: &super::ExecContext, cmd: CorporationCommand) -> anyho
             let result = ctx.client.corp_container_logs(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
-        CorporationCommand::CustomsOffices { system_id } => {
+        CorporationCommand::CustomsOffices { system_id: _ } => {
             let corp_id = ctx.corporation_id.ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
             let result = ctx.client.corp_customs_offices(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
