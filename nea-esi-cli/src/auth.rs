@@ -58,6 +58,7 @@ pub struct LoginOptions {
 pub async fn login(
     client: &EsiClient,
     config: &Config,
+    token_path: &std::path::Path,
     opts: LoginOptions,
 ) -> anyhow::Result<EsiTokens> {
     if config.app.client_id.is_none() {
@@ -86,19 +87,23 @@ pub async fn login(
     let headless = opts.headless || config.auth.headless;
 
     if headless {
-        login_copy_paste(client, &scopes).await
+        login_copy_paste(client, token_path, &scopes).await
     } else {
-        match login_browser(client, &scopes).await {
+        match login_browser(client, token_path, &scopes).await {
             Ok(tokens) => Ok(tokens),
             Err(e) => {
                 eprintln!("Browser login failed ({e}), falling back to copy-paste mode...");
-                login_copy_paste(client, &scopes).await
+                login_copy_paste(client, token_path, &scopes).await
             }
         }
     }
 }
 
-async fn login_browser(client: &EsiClient, scopes: &[&str]) -> anyhow::Result<EsiTokens> {
+async fn login_browser(
+    client: &EsiClient,
+    token_path: &std::path::Path,
+    scopes: &[&str],
+) -> anyhow::Result<EsiTokens> {
     let server = tiny_http::Server::http("127.0.0.1:0")
         .map_err(|e| anyhow::anyhow!("Failed to start local server: {e}"))?;
 
@@ -152,7 +157,7 @@ async fn login_browser(client: &EsiClient, scopes: &[&str]) -> anyhow::Result<Es
         .exchange_code(code, &challenge.code_verifier, &redirect_uri)
         .await?;
 
-    token_store::save_tokens(&tokens)?;
+    token_store::save_tokens_at(&tokens, token_path)?;
     eprintln!(
         "Logged in successfully. Token expires at {}",
         tokens.expires_at
@@ -161,7 +166,11 @@ async fn login_browser(client: &EsiClient, scopes: &[&str]) -> anyhow::Result<Es
     Ok(tokens)
 }
 
-async fn login_copy_paste(client: &EsiClient, scopes: &[&str]) -> anyhow::Result<EsiTokens> {
+async fn login_copy_paste(
+    client: &EsiClient,
+    token_path: &std::path::Path,
+    scopes: &[&str],
+) -> anyhow::Result<EsiTokens> {
     let redirect_uri = "https://localhost/callback";
 
     let challenge = client.authorize_url(redirect_uri, scopes)?;
@@ -193,7 +202,7 @@ async fn login_copy_paste(client: &EsiClient, scopes: &[&str]) -> anyhow::Result
         .exchange_code(code, &challenge.code_verifier, redirect_uri)
         .await?;
 
-    token_store::save_tokens(&tokens)?;
+    token_store::save_tokens_at(&tokens, token_path)?;
     eprintln!(
         "Logged in successfully. Token expires at {}",
         tokens.expires_at

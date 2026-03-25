@@ -25,7 +25,7 @@ pub async fn execute(ctx: &super::ExecContext, cmd: AuthCommand) -> anyhow::Resu
             all_scopes,
             headless,
         } => {
-            let config = crate::config::Config::load(ctx.config_path.as_ref())?;
+            let config = crate::config::Config::load(Some(&ctx.paths.config_path))?;
             let opts = crate::auth::LoginOptions {
                 scopes: if scopes.is_empty() {
                     None
@@ -35,16 +35,16 @@ pub async fn execute(ctx: &super::ExecContext, cmd: AuthCommand) -> anyhow::Resu
                 all_scopes,
                 headless,
             };
-            crate::auth::login(&ctx.client, &config, opts).await?;
+            crate::auth::login(&ctx.client, &config, &ctx.paths.token_path, opts).await?;
             Ok(())
         }
         AuthCommand::Logout => {
-            crate::token_store::delete_tokens()?;
+            crate::token_store::delete_tokens_at(&ctx.paths.token_path)?;
             println!("Logged out. Tokens deleted.");
             Ok(())
         }
         AuthCommand::Status => {
-            if let Some(tokens) = crate::token_store::load_tokens()? {
+            if let Some(tokens) = crate::token_store::load_tokens_at(&ctx.paths.token_path)? {
                 if tokens.is_expired() {
                     println!("Status: EXPIRED (expired at {})", tokens.expires_at);
                     println!("Run `nea-esi-cli auth login` to re-authenticate.");

@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
 use rustyline::highlight::Highlighter;
@@ -12,40 +12,6 @@ use crate::cli::Cli;
 use crate::commands::ExecContext;
 use crate::config::Config;
 use crate::output::OutputFormat;
-
-/// Top-level commands available in the REPL.
-const ROOT_COMMANDS: &[&str] = &[
-    "auth",
-    "config",
-    "status",
-    "market",
-    "character",
-    "corporation",
-    "alliance",
-    "universe",
-    "wallet",
-    "skills",
-    "assets",
-    "mail",
-    "fleet",
-    "industry",
-    "contracts",
-    "killmails",
-    "search",
-    "sovereignty",
-    "wars",
-    "fw",
-    "dogma",
-    "navigation",
-    "contacts",
-    "fittings",
-    "calendar",
-    "clones",
-    "loyalty",
-    "pi",
-    "mining",
-    "resolve",
-];
 
 const BUILTINS: &[&str] = &["exit", "quit", "help", "cd", "set"];
 
@@ -64,42 +30,33 @@ impl Completer for EsiHelper {
     ) -> rustyline::Result<(usize, Vec<Pair>)> {
         let prefix = &line[..pos];
         let words: Vec<&str> = prefix.split_whitespace().collect();
+        let active_context = self.context.as_deref();
 
-        // Determine what to complete
         let (start, candidates) =
             if words.is_empty() || (words.len() == 1 && !prefix.ends_with(' ')) {
-                // Completing the first word
                 let partial = words.first().copied().unwrap_or("");
                 let start = pos - partial.len();
-
-                let all: Vec<&str> = if self.context.is_some() {
-                    // In a context, offer subcommands via clap help text
-                    // For now just offer builtins + root commands
-                    BUILTINS
-                        .iter()
-                        .chain(ROOT_COMMANDS.iter())
-                        .copied()
-                        .collect()
-                } else {
-                    BUILTINS
-                        .iter()
-                        .chain(ROOT_COMMANDS.iter())
-                        .copied()
-                        .collect()
-                };
+                let all: Vec<String> = BUILTINS
+                    .iter()
+                    .copied()
+                    .map(str::to_string)
+                    .chain(match active_context {
+                        Some(ctx_name) => get_subcommands(ctx_name),
+                        None => root_commands(),
+                    })
+                    .collect();
 
                 let matches: Vec<Pair> = all
                     .into_iter()
                     .filter(|c| c.starts_with(partial))
                     .map(|c| Pair {
-                        display: c.to_string(),
-                        replacement: c.to_string(),
+                        display: c.clone(),
+                        replacement: c,
                     })
                     .collect();
 
                 (start, matches)
             } else {
-                // Completing a subcommand — get subcommands for the first word
                 let cmd = words[0];
                 let partial = if prefix.ends_with(' ') {
                     ""
@@ -107,8 +64,13 @@ impl Completer for EsiHelper {
                     words.last().copied().unwrap_or("")
                 };
                 let start = pos - partial.len();
-
-                let subcmds = get_subcommands(cmd);
+                let subcmds = if is_root_command(cmd) {
+                    get_subcommands(cmd)
+                } else {
+                    active_context
+                        .map(get_subcommands)
+                        .unwrap_or_default()
+                };
                 let matches: Vec<Pair> = subcmds
                     .into_iter()
                     .filter(|c| c.starts_with(partial))
@@ -143,199 +105,29 @@ impl Validator for EsiHelper {}
 impl Helper for EsiHelper {}
 
 /// Get known subcommands for a given top-level command.
-fn get_subcommands(cmd: &str) -> Vec<&'static str> {
-    match cmd {
-        "auth" => vec!["login", "logout", "status"],
-        "config" => vec!["init", "show", "set"],
-        "market" => vec![
-            "history",
-            "orders",
-            "prices",
-            "types",
-            "groups",
-            "group",
-            "structure-orders",
-        ],
-        "character" => vec![
-            "info",
-            "portrait",
-            "affiliation",
-            "roles",
-            "titles",
-            "corporation-history",
-            "medals",
-            "agents-research",
-            "fatigue",
-            "fw-stats",
-            "fleet",
-            "standings",
-            "location",
-            "ship",
-            "online",
-            "opportunities",
-            "notifications",
-            "contact-notifications",
-            "killmails",
-            "search",
-        ],
-        "corporation" => vec![
-            "info",
-            "alliance-history",
-            "icons",
-            "member-limit",
-            "members",
-            "member-tracking",
-            "member-titles",
-            "member-roles",
-            "roles-history",
-            "structures",
-            "starbases",
-            "starbase-detail",
-            "divisions",
-            "facilities",
-            "fw-stats",
-            "medals",
-            "medals-issued",
-            "container-logs",
-            "customs-offices",
-            "shareholders",
-            "titles",
-            "contacts",
-            "contact-labels",
-            "standings",
-        ],
-        "alliance" => vec![
-            "info",
-            "icons",
-            "corporations",
-            "contacts",
-            "contact-labels",
-            "list",
-        ],
-        "universe" => vec![
-            "type",
-            "types",
-            "group",
-            "groups",
-            "category",
-            "categories",
-            "system",
-            "systems",
-            "constellation",
-            "constellations",
-            "region",
-            "regions",
-            "station",
-            "stargate",
-            "structure",
-            "ancestries",
-            "bloodlines",
-            "races",
-            "factions",
-            "asteroid-belt",
-            "moon",
-            "planet",
-            "star",
-            "graphic",
-            "graphics",
-            "schematic",
-            "public-structures",
-            "system-jumps",
-            "system-kills",
-        ],
-        "wallet" => vec![
-            "balance",
-            "journal",
-            "transactions",
-            "corp-balances",
-            "corp-journal",
-            "corp-transactions",
-        ],
-        "skills" => vec!["list", "queue", "attributes", "implants"],
-        "assets" => vec![
-            "list",
-            "names",
-            "locations",
-            "corp-list",
-            "corp-names",
-            "corp-locations",
-        ],
-        "mail" => vec![
-            "list",
-            "read",
-            "labels",
-            "delete-label",
-            "delete",
-            "mailing-lists",
-        ],
-        "fleet" => vec![
-            "my-fleet",
-            "info",
-            "members",
-            "wings",
-            "kick",
-            "create-wing",
-            "delete-wing",
-            "rename-wing",
-            "create-squad",
-            "delete-squad",
-            "rename-squad",
-        ],
-        "industry" => vec![
-            "jobs",
-            "blueprints",
-            "corp-jobs",
-            "corp-blueprints",
-            "facilities",
-            "systems",
-        ],
-        "contracts" => vec![
-            "list",
-            "items",
-            "bids",
-            "corp-list",
-            "corp-items",
-            "corp-bids",
-            "public",
-            "public-items",
-            "public-bids",
-        ],
-        "killmails" => vec!["get", "character", "corporation", "war"],
-        "search" => vec!["public", "character"],
-        "sovereignty" => vec!["map", "campaigns", "structures"],
-        "wars" => vec!["list", "get", "killmails"],
-        "fw" => vec![
-            "stats",
-            "systems",
-            "leaderboards",
-            "wars",
-            "character-leaderboards",
-            "corporation-leaderboards",
-        ],
-        "dogma" => vec![
-            "attribute",
-            "effect",
-            "dynamic-item",
-            "attributes",
-            "effects",
-        ],
-        "navigation" => vec![
-            "route",
-            "waypoint",
-            "open-contract",
-            "open-info",
-            "open-market",
-        ],
-        "contacts" => vec!["list", "labels", "add", "edit", "delete"],
-        "fittings" => vec!["list", "delete"],
-        "calendar" => vec!["list", "event", "respond", "attendees"],
-        "clones" => vec!["list", "implants", "fatigue"],
-        "loyalty" => vec!["points", "offers"],
-        "pi" => vec!["planets", "planet"],
-        "mining" => vec!["ledger", "observers", "observer-details", "extractions"],
-        "resolve" => vec!["names", "ids"],
-        _ => vec![],
-    }
+fn get_subcommands(cmd: &str) -> Vec<String> {
+    let command = Cli::command();
+    command
+        .find_subcommand(cmd)
+        .map(|subcommand| {
+            subcommand
+                .get_subcommands()
+                .map(|child| child.get_name().to_string())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn root_commands() -> Vec<String> {
+    let command = Cli::command();
+    command
+        .get_subcommands()
+        .map(|subcommand| subcommand.get_name().to_string())
+        .collect()
+}
+
+fn is_root_command(cmd: &str) -> bool {
+    Cli::command().find_subcommand(cmd).is_some()
 }
 
 #[allow(clippy::too_many_lines)]
@@ -349,8 +141,10 @@ pub async fn run(mut ctx: ExecContext, _config: Config) -> anyhow::Result<()> {
     rl.set_helper(Some(helper));
 
     // Load history
-    if let Some(path) = Config::history_path() {
-        let _ = rl.load_history(&path);
+    if ctx.paths.history_path.exists() {
+        let _ = rl.load_history(&ctx.paths.history_path);
+    } else if let Some(parent) = ctx.paths.history_path.parent() {
+        let _ = std::fs::create_dir_all(parent);
     }
 
     let mut context: Option<String> = None;
@@ -398,12 +192,12 @@ pub async fn run(mut ctx: ExecContext, _config: Config) -> anyhow::Result<()> {
                 "" | "/" | ".." => {
                     context = None;
                 }
-                name if ROOT_COMMANDS.contains(&name) => {
+                name if root_commands().iter().any(|command| command == name) => {
                     context = Some(name.to_string());
                 }
                 other => {
                     eprintln!("Unknown category: {other}");
-                    eprintln!("Available: {}", ROOT_COMMANDS.join(", "));
+                    eprintln!("Available: {}", root_commands().join(", "));
                 }
             }
             continue;
@@ -450,7 +244,7 @@ pub async fn run(mut ctx: ExecContext, _config: Config) -> anyhow::Result<()> {
                     ctx.character_id = Some(cid);
                 }
                 if let Some(fmt) = parsed.format.as_deref() {
-                    ctx.format = OutputFormat::from_str_or_auto(Some(fmt));
+                    ctx.format = OutputFormat::parse(fmt)?;
                 }
 
                 if let Err(e) = crate::dispatch(&ctx, parsed.command).await {
@@ -463,7 +257,7 @@ pub async fn run(mut ctx: ExecContext, _config: Config) -> anyhow::Result<()> {
 
                 // Save tokens if refreshed
                 if let Some(tokens) = ctx.client.get_tokens().await {
-                    let _ = crate::token_store::save_tokens(&tokens);
+                    let _ = crate::token_store::save_tokens_at(&tokens, &ctx.paths.token_path);
                 }
             }
             Err(e) => {
@@ -474,12 +268,10 @@ pub async fn run(mut ctx: ExecContext, _config: Config) -> anyhow::Result<()> {
     }
 
     // Save history
-    if let Some(path) = Config::history_path() {
-        if let Some(parent) = path.parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
-        let _ = rl.save_history(&path);
+    if let Some(parent) = ctx.paths.history_path.parent() {
+        let _ = std::fs::create_dir_all(parent);
     }
+    let _ = rl.save_history(&ctx.paths.history_path);
 
     Ok(())
 }
@@ -492,10 +284,90 @@ fn print_help(context: Option<&String>) {
         eprintln!();
         eprintln!("Built-ins: cd .., cd /, help, exit, set format <fmt>");
     } else {
-        eprintln!("Commands: {}", ROOT_COMMANDS.join(", "));
+        eprintln!("Commands: {}", root_commands().join(", "));
         eprintln!();
         eprintln!("Navigation: cd <command> to enter context, cd .. to go back");
         eprintln!("Settings:   set format <json|table|csv>");
         eprintln!("Other:      help, exit, quit");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rustyline::completion::Completer;
+    use clap::CommandFactory;
+    use rustyline::history::DefaultHistory;
+    use rustyline::Context;
+
+    use crate::cli::Cli;
+
+    use super::root_commands;
+
+    fn complete(context: Option<&str>, line: &str) -> (usize, Vec<String>) {
+        let helper = super::EsiHelper {
+            context: context.map(str::to_string),
+        };
+        let history = DefaultHistory::new();
+        let ctx = Context::new(&history);
+
+        let (start, pairs) = helper.complete(line, line.len(), &ctx).unwrap();
+        let mut values: Vec<String> = pairs.into_iter().map(|pair| pair.replacement).collect();
+        values.sort();
+        (start, values)
+    }
+
+    #[test]
+    fn repl_root_commands_match_clap() {
+        let command = Cli::command();
+        let expected: Vec<String> = command
+            .get_subcommands()
+            .map(|subcommand| subcommand.get_name().to_string())
+            .collect();
+
+        assert_eq!(root_commands(), expected);
+    }
+
+    #[test]
+    fn root_prompt_completion_includes_root_commands_and_builtins() {
+        let (_, values) = complete(None, "");
+
+        assert!(values.contains(&"wallet".to_string()));
+        assert!(values.contains(&"auth".to_string()));
+        assert!(values.contains(&"exit".to_string()));
+    }
+
+    #[test]
+    fn wallet_context_completion_includes_wallet_subcommands() {
+        let (_, values) = complete(Some("wallet"), "");
+
+        assert!(values.contains(&"corp-journal".to_string()));
+        assert!(values.contains(&"corp-transactions".to_string()));
+        assert!(values.contains(&"exit".to_string()));
+        assert!(!values.contains(&"auth".to_string()));
+    }
+
+    #[test]
+    fn wallet_context_partial_completion_matches_corp_prefix() {
+        let (_, values) = complete(Some("wallet"), "corp-");
+
+        assert!(values.contains(&"corp-journal".to_string()));
+        assert!(values.contains(&"corp-transactions".to_string()));
+        assert!(!values.contains(&"auth".to_string()));
+    }
+
+    #[test]
+    fn explicit_root_command_path_still_uses_root_subcommands() {
+        let (_, values) = complete(Some("wallet"), "auth ");
+
+        let expected: Vec<String> = Cli::command()
+            .find_subcommand("auth")
+            .unwrap()
+            .get_subcommands()
+            .map(|subcommand| subcommand.get_name().to_string())
+            .collect();
+        let mut expected = expected;
+        expected.sort();
+
+        assert_eq!(values, expected);
     }
 }

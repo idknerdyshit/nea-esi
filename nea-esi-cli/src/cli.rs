@@ -11,7 +11,7 @@ pub struct Cli {
     #[arg(long, global = true)]
     pub format: Option<String>,
 
-    /// Config file path
+    /// Config file path for the active profile
     #[arg(long, global = true)]
     pub config: Option<PathBuf>,
 
@@ -182,4 +182,80 @@ pub enum Command {
         #[command(subcommand)]
         command: commands::resolve::ResolveCommand,
     },
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::Parser;
+
+    use crate::commands::wallet::WalletCommand;
+
+    use super::{Cli, Command};
+
+    #[test]
+    fn parses_corp_wallet_journal_from_id() {
+        let cli = Cli::parse_from([
+            "nea-esi-cli",
+            "wallet",
+            "corp-journal",
+            "3",
+            "--from-id",
+            "42",
+        ]);
+
+        match cli.command {
+            Command::Wallet {
+                command:
+                    WalletCommand::CorpJournal {
+                        division,
+                        from_id,
+                    },
+            } => {
+                assert_eq!(division, 3);
+                assert_eq!(from_id, Some(42));
+            }
+            _ => panic!("unexpected command"),
+        }
+    }
+
+    #[test]
+    fn parses_corp_wallet_journal_before_id_alias() {
+        let cli = Cli::parse_from([
+            "nea-esi-cli",
+            "wallet",
+            "corp-journal",
+            "3",
+            "--before-id",
+            "42",
+        ]);
+
+        match cli.command {
+            Command::Wallet {
+                command:
+                    WalletCommand::CorpJournal {
+                        division,
+                        from_id,
+                    },
+            } => {
+                assert_eq!(division, 3);
+                assert_eq!(from_id, Some(42));
+            }
+            _ => panic!("unexpected command"),
+        }
+    }
+
+    #[test]
+    fn parses_config_override_as_global_option() {
+        let cli = Cli::parse_from([
+            "nea-esi-cli",
+            "--config",
+            "/tmp/profile/config.toml",
+            "status",
+        ]);
+
+        assert_eq!(
+            cli.config.unwrap(),
+            std::path::PathBuf::from("/tmp/profile/config.toml")
+        );
+    }
 }

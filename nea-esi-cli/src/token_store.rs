@@ -3,8 +3,6 @@ use nea_esi::EsiTokens;
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 
-use crate::config::Config;
-
 #[derive(Serialize, Deserialize)]
 struct StoredTokens {
     access_token: String,
@@ -32,9 +30,8 @@ impl From<StoredTokens> for EsiTokens {
     }
 }
 
-pub fn save_tokens(tokens: &EsiTokens) -> anyhow::Result<()> {
-    let path =
-        Config::token_path().ok_or_else(|| anyhow::anyhow!("Cannot determine config directory"))?;
+pub fn save_tokens_at(tokens: &EsiTokens, path: impl AsRef<std::path::Path>) -> anyhow::Result<()> {
+    let path = path.as_ref();
 
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
@@ -64,10 +61,8 @@ pub fn save_tokens(tokens: &EsiTokens) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn load_tokens() -> anyhow::Result<Option<EsiTokens>> {
-    let Some(path) = Config::token_path() else {
-        return Ok(None);
-    };
+pub fn load_tokens_at(path: impl AsRef<std::path::Path>) -> anyhow::Result<Option<EsiTokens>> {
+    let path = path.as_ref();
 
     if !path.exists() {
         return Ok(None);
@@ -78,11 +73,48 @@ pub fn load_tokens() -> anyhow::Result<Option<EsiTokens>> {
     Ok(Some(EsiTokens::from(stored)))
 }
 
-pub fn delete_tokens() -> anyhow::Result<()> {
-    if let Some(path) = Config::token_path()
-        && path.exists()
-    {
-        std::fs::remove_file(&path)?;
+pub fn delete_tokens_at(path: impl AsRef<std::path::Path>) -> anyhow::Result<()> {
+    let path = path.as_ref();
+    if path.exists() {
+        std::fs::remove_file(path)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::Utc;
+    use nea_esi::EsiTokens;
+    use secrecy::{ExposeSecret, SecretString};
+    use tempfile::tempdir;
+
+    use super::{delete_tokens_at, load_tokens_at, save_tokens_at};
+
+    #[test]
+    fn token_round_trip_uses_explicit_path() {
+        let dir = tempdir().unwrap();
+        let token_path = dir.path().join("tokens.json");
+        let tokens = EsiTokens {
+            access_token: SecretString::from("access".to_string()),
+            refresh_token: SecretString::from("refresh".to_string()),
+            expires_at: Utc::now(),
+        };
+
+        save_tokens_at(&tokens, &token_path).unwrap();
+        let loaded = load_tokens_at(&token_path).unwrap().unwrap();
+
+        assert_eq!(loaded.access_token.expose_secret(), "access");
+        assert_eq!(loaded.refresh_token.expose_secret(), "refresh");
+    }
+
+    #[test]
+    fn delete_tokens_removes_explicit_path() {
+        let dir = tempdir().unwrap();
+        let token_path = dir.path().join("tokens.json");
+        std::fs::write(&token_path, "{}").unwrap();
+
+        delete_tokens_at(&token_path).unwrap();
+
+        assert!(!token_path.exists());
+    }
 }

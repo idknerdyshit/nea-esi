@@ -32,6 +32,8 @@ Files:
 | `tokens.json` | Persisted OAuth tokens |
 | `history.txt` | REPL command history |
 
+When `--config /path/to/config.toml` is provided, the CLI treats that directory as the active profile and reads or writes sibling `tokens.json` and `history.txt` there as well.
+
 ## Usage
 
 ```bash
@@ -44,6 +46,12 @@ nea-esi-cli universe types --search "Tritanium"
 # Output format (default: table for TTY, json when piped)
 nea-esi-cli --format json market prices
 nea-esi-cli --format csv wallet journal | head -20
+
+# Persist a default output format in config
+nea-esi-cli config set defaults.format json
+
+# Corp wallet journal cursor pagination
+nea-esi-cli wallet corp-journal 1 --from-id 123456789
 
 # Override character
 nea-esi-cli --character-id 12345 wallet balance
@@ -65,10 +73,12 @@ nea-esi-cli interactive
 | Option | Description |
 |--------|-------------|
 | `--format <FORMAT>` | Output format: json, table, csv |
-| `--config <PATH>` | Override config file path |
+| `--config <PATH>` | Override the active profile's `config.toml` path |
 | `--character-id <ID>` | Override default character ID |
 | `--no-color` | Disable colored output |
 | `-v, --verbose` | Enable verbose/debug output |
+
+`config set defaults.format <value>` accepts only `json`, `table`, or `csv`.
 
 ## Command Groups
 

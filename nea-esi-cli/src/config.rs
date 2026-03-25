@@ -36,6 +36,13 @@ pub struct AuthConfig {
     pub headless: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CliPaths {
+    pub config_path: PathBuf,
+    pub token_path: PathBuf,
+    pub history_path: PathBuf,
+}
+
 impl Config {
     pub fn config_dir() -> Option<PathBuf> {
         ProjectDirs::from("", "", "nea-esi").map(|d| d.config_dir().to_path_buf())
@@ -51,6 +58,35 @@ impl Config {
 
     pub fn history_path() -> Option<PathBuf> {
         Self::config_dir().map(|d| d.join("history.txt"))
+    }
+
+    pub fn cli_paths(config_override: Option<&PathBuf>) -> anyhow::Result<CliPaths> {
+        if let Some(path) = config_override {
+            let parent = path.parent().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Config path must include a parent directory: {}",
+                    path.display()
+                )
+            })?;
+            return Ok(CliPaths {
+                config_path: path.clone(),
+                token_path: parent.join("tokens.json"),
+                history_path: parent.join("history.txt"),
+            });
+        }
+
+        let config_path = Self::config_path()
+            .ok_or_else(|| anyhow::anyhow!("Cannot determine config directory"))?;
+        let token_path = Self::token_path()
+            .ok_or_else(|| anyhow::anyhow!("Cannot determine config directory"))?;
+        let history_path = Self::history_path()
+            .ok_or_else(|| anyhow::anyhow!("Cannot determine config directory"))?;
+
+        Ok(CliPaths {
+            config_path,
+            token_path,
+            history_path,
+        })
     }
 
     pub fn load(path: Option<&PathBuf>) -> anyhow::Result<Self> {
@@ -103,5 +139,25 @@ impl Config {
         std::fs::write(&path, content)?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::Config;
+
+    #[test]
+    fn cli_paths_for_override_use_sibling_files() {
+        let config_path = PathBuf::from("/tmp/profile/config.toml");
+        let paths = Config::cli_paths(Some(&config_path)).unwrap();
+
+        assert_eq!(paths.config_path, config_path);
+        assert_eq!(paths.token_path, PathBuf::from("/tmp/profile/tokens.json"));
+        assert_eq!(
+            paths.history_path,
+            PathBuf::from("/tmp/profile/history.txt")
+        );
     }
 }

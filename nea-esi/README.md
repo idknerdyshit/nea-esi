@@ -269,7 +269,7 @@ client.character_planet_detail(character_id: i64, planet_id: i32) -> EsiPlanetDe
 
 ```rust
 client.corp_wallet_balances(corporation_id: i64) -> Vec<EsiCorpWalletDivision>
-client.corp_wallet_journal(corporation_id: i64, division: i32) -> Vec<EsiWalletJournalEntry>  // paginated
+client.corp_wallet_journal(corporation_id: i64, division: i32, from_id: Option<i64>) -> Vec<EsiWalletJournalEntry>  // paginated with optional from_id
 client.corp_wallet_transactions(corporation_id: i64, division: i32) -> Vec<EsiWalletTransaction>
 ```
 

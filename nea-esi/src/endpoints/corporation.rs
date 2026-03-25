@@ -51,17 +51,30 @@ impl EsiClient {
             .await
     }
 
-    /// Fetch corporation wallet journal for a division (paginated).
+    /// Fetch corporation wallet journal for a division.
+    ///
+    /// Pass `from_id` to page backwards through older journal entries.
     #[tracing::instrument(skip(self))]
     pub async fn corp_wallet_journal(
         &self,
         corporation_id: i64,
         division: i32,
+        from_id: Option<i64>,
     ) -> Result<Vec<EsiWalletJournalEntry>> {
-        self.get_paginated_json(&format!(
-            "/corporations/{corporation_id}/wallets/{division}/journal/"
-        ))
-        .await
+        match from_id {
+            Some(id) => {
+                self.get_json(&format!(
+                    "/corporations/{corporation_id}/wallets/{division}/journal/?from_id={id}"
+                ))
+                .await
+            }
+            None => {
+                self.get_paginated_json(&format!(
+                    "/corporations/{corporation_id}/wallets/{division}/journal/"
+                ))
+                .await
+            }
+        }
     }
 
     /// Fetch corporation wallet transactions for a division.

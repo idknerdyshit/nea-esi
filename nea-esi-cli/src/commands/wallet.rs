@@ -16,9 +16,9 @@ pub enum WalletCommand {
     CorpJournal {
         /// Wallet division (1-7)
         division: i32,
-        /// Fetch entries before this ID
-        #[arg(long)]
-        before_id: Option<i64>,
+        /// Fetch entries starting from this ID
+        #[arg(long = "from-id", alias = "before-id")]
+        from_id: Option<i64>,
     },
     /// Get corporation wallet transactions for a division
     CorpTransactions {
@@ -63,12 +63,15 @@ pub async fn execute(ctx: &super::ExecContext, cmd: WalletCommand) -> anyhow::Re
         }
         WalletCommand::CorpJournal {
             division,
-            before_id: _,
+            from_id,
         } => {
             let corp_id = ctx
                 .corporation_id
                 .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;
-            let result = ctx.client.corp_wallet_journal(corp_id, division).await?;
+            let result = ctx
+                .client
+                .corp_wallet_journal(corp_id, division, from_id)
+                .await?;
             crate::output::print_list(&result, ctx.format)
         }
         WalletCommand::CorpTransactions { division, from_id } => {

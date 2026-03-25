@@ -10,19 +10,33 @@ pub enum OutputFormat {
 }
 
 impl OutputFormat {
-    pub fn from_str_or_auto(s: Option<&str>) -> Self {
+    pub fn parse(s: &str) -> anyhow::Result<Self> {
         match s {
-            Some("json") => Self::Json,
-            Some("table") => Self::Table,
-            Some("csv") => Self::Csv,
-            _ => {
-                if io::stdout().is_terminal() {
-                    Self::Table
-                } else {
-                    Self::Json
-                }
-            }
+            "json" => Ok(Self::Json),
+            "table" => Ok(Self::Table),
+            "csv" => Ok(Self::Csv),
+            other => Err(anyhow::anyhow!(
+                "Unknown output format `{other}`. Use json, table, or csv."
+            )),
         }
+    }
+
+    pub fn auto() -> Self {
+        if io::stdout().is_terminal() {
+            Self::Table
+        } else {
+            Self::Json
+        }
+    }
+
+    pub fn resolve(cli_value: Option<&str>, config_value: Option<&str>) -> anyhow::Result<Self> {
+        if let Some(value) = cli_value {
+            return Self::parse(value);
+        }
+        if let Some(value) = config_value {
+            return Self::parse(value);
+        }
+        Ok(Self::auto())
     }
 }
 
@@ -132,13 +146,47 @@ fn print_csv<T: Serialize>(items: &[T]) -> anyhow::Result<()> {
 }
 
 /// Print a simple scalar (like wallet balance).
-pub fn print_scalar<T: std::fmt::Display>(value: T, label: &str, format: OutputFormat) {
+pub fn print_scalar<T: Serialize + std::fmt::Display>(value: T, label: &str, format: OutputFormat) {
     match format {
         OutputFormat::Json => {
-            println!("{}", serde_json::json!({ label: value.to_string() }));
+            println!("{}", scalar_json_value(&value, label));
         }
         OutputFormat::Table | OutputFormat::Csv => {
             println!("{label}: {value}");
         }
+    }
+}
+
+fn scalar_json_value<T: Serialize>(value: &T, label: &str) -> serde_json::Value {
+    serde_json::json!({ label: value })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::OutputFormat;
+    use crate::output::scalar_json_value;
+
+    #[test]
+    fn resolve_prefers_cli_value() {
+        let format = OutputFormat::resolve(Some("csv"), Some("json")).unwrap();
+        assert_eq!(format, OutputFormat::Csv);
+    }
+
+    #[test]
+    fn resolve_uses_config_when_cli_is_missing() {
+        let format = OutputFormat::resolve(None, Some("table")).unwrap();
+        assert_eq!(format, OutputFormat::Table);
+    }
+
+    #[test]
+    fn resolve_rejects_invalid_config_values() {
+        let error = OutputFormat::resolve(None, Some("yaml")).unwrap_err();
+        assert!(error.to_string().contains("Unknown output format"));
+    }
+
+    #[test]
+    fn scalar_json_preserves_number_type() {
+        let json = scalar_json_value(&42, "member_limit");
+        assert_eq!(json, serde_json::json!({ "member_limit": 42 }));
     }
 }

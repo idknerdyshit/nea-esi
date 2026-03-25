@@ -1007,10 +1007,44 @@ async fn test_corp_wallet_journal() {
         .await;
 
     let client = EsiClient::new().with_base_url(server.uri());
-    let entries = client.corp_wallet_journal(98000001, 1).await.unwrap();
+    let entries = client.corp_wallet_journal(98000001, 1, None).await.unwrap();
 
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].id, 987654321);
+}
+
+#[tokio::test]
+async fn test_corp_wallet_journal_from_id() {
+    let server = MockServer::start().await;
+
+    let body = serde_json::json!([{
+        "id": 987654321,
+        "date": "2026-03-15T10:30:00Z",
+        "ref_type": "corporation_account_withdrawal",
+        "amount": -5000000.0
+    }, {
+        "id": 987654320,
+        "date": "2026-03-14T10:30:00Z",
+        "ref_type": "corporation_account_withdrawal",
+        "amount": -2500000.0
+    }]);
+
+    Mock::given(method("GET"))
+        .and(path("/corporations/98000001/wallets/1/journal/"))
+        .and(query_param("from_id", "987654321"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let entries = client
+        .corp_wallet_journal(98000001, 1, Some(987654321))
+        .await
+        .unwrap();
+
+    assert_eq!(entries.len(), 2);
+    assert_eq!(entries[0].id, 987654321);
+    assert_eq!(entries[1].id, 987654320);
 }
 
 // ---------------------------------------------------------------------------

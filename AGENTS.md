@@ -4,31 +4,28 @@
 
 This file applies to the entire repository.
 
-## Repository Summary
+Crate-specific guidance lives in:
 
-`nea-esi` is a Rust workspace with two crates:
+- `nea-esi/AGENTS.md`
+- `nea-esi-cli/AGENTS.md`
+
+## Workspace Summary
+
+`nea-esi` is a Rust workspace with resolver `3` and two members:
 
 - `nea-esi/`: async library crate for EVE Online ESI access, OAuth/SSO, pagination, retry, ETag caching, and rate-limit handling
-- `nea-esi-cli/`: interactive CLI crate built on top of the library, with clap-based commands, REPL support, config persistence, and browser login flow
+- `nea-esi-cli/`: interactive CLI crate built on top of the library with clap commands, config persistence, token storage, browser or headless login, and a REPL
 
-Workspace root:
+Top-level files:
 
-- `Cargo.toml`: workspace manifest with resolver `3`
+- `Cargo.toml`: workspace manifest
+- `README.md`: workspace overview and quick-start docs for both crates
+- `CHANGELOG.md`: release notes
 
-## Structure
+## Workspace Structure
 
-- `nea-esi/src/lib.rs`: core `EsiClient`, response types, constants, shared request logic
-- `nea-esi/src/auth.rs`: OAuth2 PKCE, token models, credential handling
-- `nea-esi/src/endpoints/*.rs`: endpoint-specific `impl EsiClient` blocks
-- `nea-esi/tests/auth_integration.rs`: auth/token integration coverage with `wiremock`
-- `nea-esi/tests/endpoints_integration.rs`: endpoint integration coverage with `wiremock`
-- `nea-esi-cli/src/main.rs`: CLI entry point and dispatch
-- `nea-esi-cli/src/cli.rs`: clap command definitions
-- `nea-esi-cli/src/auth.rs`: browser login and callback handling
-- `nea-esi-cli/src/config.rs`: config file loading/saving
-- `nea-esi-cli/src/token_store.rs`: token persistence
-- `nea-esi-cli/src/repl.rs`: interactive REPL
-- `nea-esi-cli/src/commands/*.rs`: command handlers mapped to ESI domains
+- `nea-esi/`: library crate; see `nea-esi/AGENTS.md`
+- `nea-esi-cli/`: CLI crate; see `nea-esi-cli/AGENTS.md`
 
 ## Build And Test
 
@@ -42,36 +39,35 @@ cargo build -p nea-esi-cli
 cargo run -p nea-esi-cli -- --help
 ```
 
-Preferred verification after code changes:
+Preferred verification after changes:
 
-- library changes: `cargo test -p nea-esi`
+- library-only changes: `cargo test -p nea-esi`
 - CLI-only changes: `cargo build -p nea-esi-cli`
 - cross-cutting changes: `cargo test --workspace`
 
 ## Development Conventions
 
 - Rust edition is `2024` in both crates.
-- Keep endpoint implementations in `nea-esi/src/endpoints/` as `impl EsiClient` blocks.
-- Keep public response/request models in the library crate, primarily in `nea-esi/src/lib.rs` unless there is a strong reason to localize them.
-- Library methods are async and should continue returning `nea_esi::Result<T>` / `Result<T, EsiError>`.
-- The CLI generally mirrors library capabilities 1:1 through command modules.
-- Tests use `wiremock`; prefer mocked HTTP flows over live ESI calls.
-- There are many existing unit tests in `nea-esi/src/lib.rs` and `nea-esi/src/auth.rs`; extend nearby tests when changing related behavior.
+- Prefer small, targeted edits and preserve unrelated local changes.
+- Keep shared API models and HTTP behavior in the library crate; keep CLI concerns in the CLI crate.
+- For new end-to-end functionality, add or update the library surface first, then wire it into the CLI if needed.
+- Prefer mocked HTTP coverage with `wiremock` over live ESI calls.
+- If a change affects auth behavior, inspect both crates because auth responsibilities are split between library and CLI layers.
 
 ## Editing Guidance
 
-- Prefer small, targeted edits. This repo may already contain unrelated local changes.
 - Do not revert or overwrite user changes outside the task you are handling.
-- Keep new code aligned with the existing async/Tokio style and current module boundaries.
-- For new ESI endpoints, add the library method first, then add or update the matching CLI command if appropriate.
-- For auth changes, inspect both `nea-esi/src/auth.rs` and `nea-esi-cli/src/auth.rs`; behavior is split across the library and CLI.
+- Keep module boundaries aligned with the existing crate layout instead of adding cross-cutting shortcuts at the workspace root.
+- Update crate-local docs or READMEs when public behavior changes materially.
+- When changing files inside a crate, follow the more specific instructions in that crate's `AGENTS.md`.
 
 ## Verification Guidance
 
-- If you touch request/auth/pagination logic, add or update `wiremock` tests.
-- If you touch CLI parsing or dispatch, at minimum confirm the crate still builds with `cargo build -p nea-esi-cli`.
-- If you add new public API surface, ensure the change is reflected in crate docs or README when warranted.
+- Request/auth/pagination changes should include or update mocked tests in `nea-esi/tests/`.
+- CLI parsing, dispatch, or persistence changes should at minimum keep `nea-esi-cli` building.
+- Cross-cutting changes should be validated at the workspace level.
 
-## Known Local State
+## Repository State
 
-No known dirty worktree state. Merge conflicts in `nea-esi/src/auth.rs` and `nea-esi-cli/src/auth.rs` have been resolved.
+- `git status` was clean when this file was updated.
+- Avoid encoding transient local-state notes here unless they are still true and useful for future work.

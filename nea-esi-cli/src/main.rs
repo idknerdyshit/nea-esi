@@ -30,14 +30,15 @@ async fn main() -> anyhow::Result<()> {
             .init();
     }
 
-    let config = config::Config::load(cli.config.as_ref())?;
-    let format = OutputFormat::from_str_or_auto(cli.format.as_deref());
+    let paths = config::Config::cli_paths(cli.config.as_ref())?;
+    let config = config::Config::load(Some(&paths.config_path))?;
+    let format = OutputFormat::resolve(cli.format.as_deref(), config.defaults.format.as_deref())?;
 
     // Build the ESI client
     let client = build_client(&config)?;
 
     // Load tokens if available
-    if let Some(tokens) = token_store::load_tokens()? {
+    if let Some(tokens) = token_store::load_tokens_at(&paths.token_path)? {
         client.set_tokens(tokens).await;
     }
 
@@ -49,7 +50,7 @@ async fn main() -> anyhow::Result<()> {
         format,
         character_id,
         corporation_id,
-        config_path: cli.config.clone(),
+        paths,
     };
 
     if matches!(cli.command, Command::Interactive) {
@@ -59,7 +60,7 @@ async fn main() -> anyhow::Result<()> {
 
         // Save tokens back if they were refreshed
         if let Some(tokens) = ctx.client.get_tokens().await {
-            token_store::save_tokens(&tokens)?;
+            token_store::save_tokens_at(&tokens, &ctx.paths.token_path)?;
         }
     }
 

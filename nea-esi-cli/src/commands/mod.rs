@@ -34,5 +34,5 @@ pub struct ExecContext {
     pub format: crate::output::OutputFormat,
     pub character_id: Option<i64>,
     pub corporation_id: Option<i64>,
-    pub config_path: Option<std::path::PathBuf>,
+    pub paths: crate::config::CliPaths,
 }

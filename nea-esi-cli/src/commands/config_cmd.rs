@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::output::OutputFormat;
 
 #[derive(clap::Subcommand)]
 pub enum ConfigCommand {
@@ -19,17 +20,13 @@ pub fn execute(ctx: &super::ExecContext, cmd: ConfigCommand) -> anyhow::Result<(
     match cmd {
         ConfigCommand::Init => {
             let config = Config::default();
-            config.save(ctx.config_path.as_ref())?;
-            let path = ctx
-                .config_path
-                .clone()
-                .or_else(Config::config_path)
-                .unwrap_or_default();
+            config.save(Some(&ctx.paths.config_path))?;
+            let path = ctx.paths.config_path.clone();
             println!("Config initialized at {}", path.display());
             Ok(())
         }
         ConfigCommand::Show => {
-            let mut config = Config::load(ctx.config_path.as_ref())?;
+            let mut config = Config::load(Some(&ctx.paths.config_path))?;
             // Mask client_secret to avoid exposing it in terminal output.
             if let Some(ref secret) = config.app.client_secret {
                 let masked = if secret.len() > 4 {
@@ -44,7 +41,7 @@ pub fn execute(ctx: &super::ExecContext, cmd: ConfigCommand) -> anyhow::Result<(
             Ok(())
         }
         ConfigCommand::Set { key, value } => {
-            let mut config = Config::load(ctx.config_path.as_ref())?;
+            let mut config = Config::load(Some(&ctx.paths.config_path))?;
             match key.as_str() {
                 "app.client_id" => config.app.client_id = Some(value),
                 "app.client_secret" => config.app.client_secret = Some(value),
@@ -55,7 +52,10 @@ pub fn execute(ctx: &super::ExecContext, cmd: ConfigCommand) -> anyhow::Result<(
                 "defaults.corporation_id" => {
                     config.defaults.corporation_id = Some(value.parse()?);
                 }
-                "defaults.format" => config.defaults.format = Some(value),
+                "defaults.format" => {
+                    OutputFormat::parse(&value)?;
+                    config.defaults.format = Some(value);
+                }
                 "defaults.region_id" => {
                     config.defaults.region_id = Some(value.parse()?);
                 }
@@ -66,7 +66,7 @@ pub fn execute(ctx: &super::ExecContext, cmd: ConfigCommand) -> anyhow::Result<(
                     return Err(anyhow::anyhow!("Unknown config key: {other}"));
                 }
             }
-            config.save(ctx.config_path.as_ref())?;
+            config.save(Some(&ctx.paths.config_path))?;
             println!("Set {key} successfully.");
             Ok(())
         }
