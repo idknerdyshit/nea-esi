@@ -1,6 +1,6 @@
 [package]
 name = "nea-esi"
-version = "0.7.1"
+version = "0.7.2"
 edition = "2024"
 description = "Rate-limited Rust client for EVE Online's ESI (EVE Swagger Interface) API"
 license = "MIT"

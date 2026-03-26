@@ -67,9 +67,7 @@ impl Completer for EsiHelper {
                 let subcmds = if is_root_command(cmd) {
                     get_subcommands(cmd)
                 } else {
-                    active_context
-                        .map(get_subcommands)
-                        .unwrap_or_default()
+                    active_context.map(get_subcommands).unwrap_or_default()
                 };
                 let matches: Vec<Pair> = subcmds
                     .into_iter()
@@ -294,10 +292,10 @@ fn print_help(context: Option<&String>) {
 
 #[cfg(test)]
 mod tests {
-    use rustyline::completion::Completer;
     use clap::CommandFactory;
-    use rustyline::history::DefaultHistory;
     use rustyline::Context;
+    use rustyline::completion::Completer;
+    use rustyline::history::DefaultHistory;
 
     use crate::cli::Cli;
 

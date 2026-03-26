@@ -61,10 +61,7 @@ pub async fn execute(ctx: &super::ExecContext, cmd: WalletCommand) -> anyhow::Re
             let result = ctx.client.corp_wallet_balances(corp_id).await?;
             crate::output::print_list(&result, ctx.format)
         }
-        WalletCommand::CorpJournal {
-            division,
-            from_id,
-        } => {
+        WalletCommand::CorpJournal { division, from_id } => {
             let corp_id = ctx
                 .corporation_id
                 .ok_or_else(|| anyhow::anyhow!("No corporation ID specified"))?;

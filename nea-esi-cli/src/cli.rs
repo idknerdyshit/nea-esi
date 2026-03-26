@@ -205,11 +205,7 @@ mod tests {
 
         match cli.command {
             Command::Wallet {
-                command:
-                    WalletCommand::CorpJournal {
-                        division,
-                        from_id,
-                    },
+                command: WalletCommand::CorpJournal { division, from_id },
             } => {
                 assert_eq!(division, 3);
                 assert_eq!(from_id, Some(42));
@@ -231,11 +227,7 @@ mod tests {
 
         match cli.command {
             Command::Wallet {
-                command:
-                    WalletCommand::CorpJournal {
-                        division,
-                        from_id,
-                    },
+                command: WalletCommand::CorpJournal { division, from_id },
             } => {
                 assert_eq!(division, 3);
                 assert_eq!(from_id, Some(42));

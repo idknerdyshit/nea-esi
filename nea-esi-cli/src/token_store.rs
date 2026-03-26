@@ -50,7 +50,7 @@ pub fn save_tokens_at(tokens: &EsiTokens, path: impl AsRef<std::path::Path>) -> 
             .create(true)
             .truncate(true)
             .mode(0o600)
-            .open(&path)?;
+            .open(path)?;
         let mut writer = std::io::BufWriter::new(file);
         writer.write_all(json.as_bytes())?;
     }
@@ -68,7 +68,7 @@ pub fn load_tokens_at(path: impl AsRef<std::path::Path>) -> anyhow::Result<Optio
         return Ok(None);
     }
 
-    let content = std::fs::read_to_string(&path)?;
+    let content = std::fs::read_to_string(path)?;
     let stored: StoredTokens = serde_json::from_str(&content)?;
     Ok(Some(EsiTokens::from(stored)))
 }
