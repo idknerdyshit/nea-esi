@@ -11,7 +11,7 @@ name = "nea-esi-cli"
 path = "src/main.rs"
 
 [dependencies]
-nea-esi = { path = "../nea-esi" }
+nea-esi = { version = "0.7.2", path = "../nea-esi" }
 tokio = { version = "1", features = ["full"] }
 clap = { version = "4", features = ["derive", "env"] }
 serde = { version = "1", features = ["derive"] }
