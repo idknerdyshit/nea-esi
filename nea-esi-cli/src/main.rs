@@ -34,10 +34,12 @@ async fn main() -> anyhow::Result<()> {
     let config = config::Config::load(Some(&paths.config_path))?;
     let format = OutputFormat::resolve(cli.format.as_deref(), config.defaults.format.as_deref())?;
 
-    // Build the ESI client
+    // Build the client once up front so one-shot commands and the REPL share the
+    // same auth/cache configuration and token state.
     let client = build_client(&config)?;
 
-    // Load tokens if available
+    // Seed the client with persisted tokens so request-time refresh can happen
+    // transparently inside the library.
     if let Some(tokens) = token_store::load_tokens_at(&paths.token_path)? {
         client.set_tokens(tokens).await;
     }
@@ -58,7 +60,8 @@ async fn main() -> anyhow::Result<()> {
     } else {
         dispatch(&ctx, cli.command).await?;
 
-        // Save tokens back if they were refreshed
+        // Persist after command execution because a request may have refreshed
+        // the access token even when the user did not explicitly run `auth login`.
         if let Some(tokens) = ctx.client.get_tokens().await {
             token_store::save_tokens_at(&tokens, &ctx.paths.token_path)?;
         }

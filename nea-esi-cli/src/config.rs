@@ -68,6 +68,8 @@ impl Config {
                     path.display()
                 )
             })?;
+            // Treat an explicit config path as the root of a self-contained CLI
+            // profile so tokens and REPL history follow that profile automatically.
             return Ok(CliPaths {
                 config_path: path.clone(),
                 token_path: parent.join("tokens.json"),
@@ -98,6 +100,8 @@ impl Config {
             },
         };
 
+        // Missing config is a normal first-run case; callers can operate against
+        // defaults without having to special-case file creation.
         if !path.exists() {
             return Ok(Self::default());
         }

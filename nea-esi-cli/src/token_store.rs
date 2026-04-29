@@ -40,7 +40,8 @@ pub fn save_tokens_at(tokens: &EsiTokens, path: impl AsRef<std::path::Path>) -> 
     let stored = StoredTokens::from(tokens);
     let json = serde_json::to_string_pretty(&stored)?;
 
-    // Set restrictive permissions on Unix before writing
+    // Create the file with restrictive permissions up front so refreshed tokens
+    // are never briefly written to a world-readable file.
     #[cfg(unix)]
     {
         use std::io::Write;
@@ -64,6 +65,8 @@ pub fn save_tokens_at(tokens: &EsiTokens, path: impl AsRef<std::path::Path>) -> 
 pub fn load_tokens_at(path: impl AsRef<std::path::Path>) -> anyhow::Result<Option<EsiTokens>> {
     let path = path.as_ref();
 
+    // Treat missing tokens as logged-out state rather than an error so startup
+    // and logout flows stay simple.
     if !path.exists() {
         return Ok(None);
     }

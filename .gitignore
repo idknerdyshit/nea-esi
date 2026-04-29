@@ -1,3 +1,42 @@
+# Rust
 /target
 Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# Claude Code
 .claude/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.fuse_hidden*
+.Trash-*
+
+# Editors / IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*.iml
+.nvim.lua
+.helix/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log

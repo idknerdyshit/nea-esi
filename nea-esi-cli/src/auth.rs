@@ -69,7 +69,8 @@ pub async fn login(
         );
     }
 
-    // Determine scopes
+    // Keep scope resolution predictable: explicit CLI flags win, then config,
+    // then the built-in read-only default set.
     let scopes: Vec<&str> = if opts.all_scopes {
         DEFAULT_SCOPES
             .iter()
@@ -104,6 +105,9 @@ async fn login_browser(
     token_path: &std::path::Path,
     scopes: &[&str],
 ) -> anyhow::Result<EsiTokens> {
+    // Bind an ephemeral localhost port so this flow works without hard-coding a
+    // callback port in advance. The chosen port is reflected in the redirect URI
+    // we send to SSO a few lines below.
     let server = tiny_http::Server::http("127.0.0.1:0")
         .map_err(|e| anyhow::anyhow!("Failed to start local server: {e}"))?;
 
@@ -119,7 +123,8 @@ async fn login_browser(
         eprintln!("Could not open browser: {e}");
     }
 
-    // Wait for the callback (with timeout)
+    // tiny_http gives us only the request path/query, so synthesize a full URL
+    // before handing it to `url::Url` for robust query parsing.
     let request = server
         .recv_timeout(std::time::Duration::from_secs(120))
         .map_err(|e| anyhow::anyhow!("Error waiting for callback: {e}"))?
@@ -171,6 +176,8 @@ async fn login_copy_paste(
     token_path: &std::path::Path,
     scopes: &[&str],
 ) -> anyhow::Result<EsiTokens> {
+    // This redirect is never served locally; it only gives the user a stable
+    // callback URL to copy from after SSO redirects in the browser.
     let redirect_uri = "https://localhost/callback";
 
     let challenge = client.authorize_url(redirect_uri, scopes)?;
