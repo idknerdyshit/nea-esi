@@ -9,6 +9,8 @@ use crate::{
     EsiWalletJournalEntry, EsiWalletTransaction, Result,
 };
 
+use super::ASSET_ID_CHUNK_SIZE;
+
 impl EsiClient {
     // -----------------------------------------------------------------------
     // Corporation info
@@ -121,9 +123,10 @@ impl EsiClient {
         corporation_id: i64,
         item_ids: &[i64],
     ) -> Result<Vec<EsiAssetName>> {
-        self.post_json(
+        self.post_chunked_ids_json(
             &format!("/corporations/{corporation_id}/assets/names/"),
             item_ids,
+            ASSET_ID_CHUNK_SIZE,
         )
         .await
     }
@@ -135,9 +138,10 @@ impl EsiClient {
         corporation_id: i64,
         item_ids: &[i64],
     ) -> Result<Vec<EsiAssetLocation>> {
-        self.post_json(
+        self.post_chunked_ids_json(
             &format!("/corporations/{corporation_id}/assets/locations/"),
             item_ids,
+            ASSET_ID_CHUNK_SIZE,
         )
         .await
     }

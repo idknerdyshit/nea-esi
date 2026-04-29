@@ -18,7 +18,7 @@ use crate::{EsiClient, EsiError, Result};
 
 pub(crate) const RESOLVE_NAMES_CHUNK_SIZE: usize = 1000;
 pub(crate) const RESOLVE_IDS_CHUNK_SIZE: usize = 500;
-pub(crate) const ASSET_NAMES_CHUNK_SIZE: usize = 1000;
+pub(crate) const ASSET_ID_CHUNK_SIZE: usize = 1000;
 pub(crate) const AFFILIATION_CHUNK_SIZE: usize = 1000;
 
 impl EsiClient {
@@ -46,6 +46,25 @@ impl EsiClient {
         resp.json()
             .await
             .map_err(|e| EsiError::Deserialize(e.to_string()))
+    }
+
+    /// POST chunks of item IDs to a path relative to `base_url`, concatenating results.
+    pub(crate) async fn post_chunked_ids_json<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        ids: &[i64],
+        chunk_size: usize,
+    ) -> Result<Vec<T>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut all = Vec::with_capacity(ids.len());
+        for chunk in ids.chunks(chunk_size) {
+            let batch: Vec<T> = self.post_json(path, &chunk).await?;
+            all.extend(batch);
+        }
+        Ok(all)
     }
 
     /// DELETE a path relative to `base_url`, discarding the response body.

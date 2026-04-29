@@ -247,17 +247,39 @@ impl EsiClient {
                 .as_secs();
             let reset_at = self.error_budget_reset_at.load(Ordering::Relaxed);
             let wait_secs = if reset_at > now {
-                reset_at - now
-            } else {
+                Some(reset_at - now)
+            } else if reset_at == 0 {
                 // No reset header seen yet – fall back to a conservative wait.
-                60
+                Some(60)
+            } else {
+                None
             };
-            warn!(
-                budget,
-                wait_secs, "ESI error budget low – sleeping until reset"
-            );
-            tokio::time::sleep(Duration::from_secs(wait_secs)).await;
+
+            if let Some(wait_secs) = wait_secs {
+                warn!(
+                    budget,
+                    wait_secs, "ESI error budget low – sleeping until reset"
+                );
+                tokio::time::sleep(Duration::from_secs(wait_secs)).await;
+            }
         }
+    }
+
+    fn is_rate_limited(&self) -> bool {
+        if self.error_budget.load(Ordering::Relaxed) > 0 {
+            return false;
+        }
+
+        let reset_at = self.error_budget_reset_at.load(Ordering::Relaxed);
+        if reset_at == 0 {
+            return false;
+        }
+
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        reset_at > now
     }
 
     /// Enable the `ETag` response cache (builder pattern).
@@ -470,7 +492,7 @@ impl EsiClient {
 
         self.wait_for_budget_reset().await;
 
-        if self.error_budget.load(Ordering::Relaxed) <= 0 {
+        if self.is_rate_limited() {
             return Err(EsiError::RateLimited);
         }
 
@@ -742,6 +764,59 @@ mod tests {
         assert_eq!(ask, Some(15.0));
         assert_eq!(bv, 100);
         assert_eq!(av, 50);
+    }
+
+    #[test]
+    fn test_rate_limit_blocks_before_reset_deadline() {
+        let client = EsiClient::new();
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+
+        client.error_budget.store(0, Ordering::Relaxed);
+        client
+            .error_budget_reset_at
+            .store(now + 30, Ordering::Relaxed);
+
+        assert!(client.is_rate_limited());
+    }
+
+    #[test]
+    fn test_rate_limit_allows_probe_after_reset_deadline() {
+        let client = EsiClient::new();
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+
+        client.error_budget.store(0, Ordering::Relaxed);
+        client
+            .error_budget_reset_at
+            .store(now.saturating_sub(1), Ordering::Relaxed);
+
+        assert!(!client.is_rate_limited());
+    }
+
+    #[tokio::test]
+    async fn test_wait_for_budget_reset_skips_sleep_after_deadline() {
+        let client = EsiClient::new();
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+
+        client.error_budget.store(0, Ordering::Relaxed);
+        client
+            .error_budget_reset_at
+            .store(now.saturating_sub(1), Ordering::Relaxed);
+
+        tokio::time::timeout(
+            std::time::Duration::from_millis(10),
+            client.wait_for_budget_reset(),
+        )
+        .await
+        .expect("wait_for_budget_reset should not sleep after the reset deadline");
     }
 
     #[test]

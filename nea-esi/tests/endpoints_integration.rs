@@ -1174,6 +1174,139 @@ async fn test_corp_asset_locations() {
     assert!((locs[0].position.x - 1.0).abs() < f64::EPSILON);
 }
 
+#[tokio::test]
+async fn test_character_asset_locations_batches_large_payloads() {
+    let server = MockServer::start().await;
+
+    let ids: Vec<i64> = (1..=1001).collect();
+    let first_chunk = ids[..1000].to_vec();
+    let second_chunk = ids[1000..].to_vec();
+    let first_response: Vec<_> = first_chunk
+        .iter()
+        .map(|id| serde_json::json!({"item_id": *id, "position": {"x": *id as f64, "y": 0.0, "z": 0.0}}))
+        .collect();
+    let second_response: Vec<_> = second_chunk
+        .iter()
+        .map(|id| serde_json::json!({"item_id": *id, "position": {"x": *id as f64, "y": 0.0, "z": 0.0}}))
+        .collect();
+
+    Mock::given(method("POST"))
+        .and(path("/characters/91234567/assets/locations/"))
+        .and(body_json(serde_json::json!(first_chunk.clone())))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&first_response))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    Mock::given(method("POST"))
+        .and(path("/characters/91234567/assets/locations/"))
+        .and(body_json(serde_json::json!(second_chunk.clone())))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&second_response))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let locs = client
+        .character_asset_locations(91234567, &ids)
+        .await
+        .unwrap();
+
+    assert_eq!(locs.len(), 1001);
+    assert!((locs[0].position.x - 1.0).abs() < f64::EPSILON);
+    assert!((locs[1000].position.x - 1001.0).abs() < f64::EPSILON);
+}
+
+#[tokio::test]
+async fn test_corp_asset_names_batches_large_payloads() {
+    let server = MockServer::start().await;
+
+    let ids: Vec<i64> = (1..=1001).collect();
+    let first_chunk = ids[..1000].to_vec();
+    let second_chunk = ids[1000..].to_vec();
+    let first_response: Vec<_> = first_chunk
+        .iter()
+        .map(|id| serde_json::json!({"item_id": *id, "name": format!("Item {id}")}))
+        .collect();
+    let second_response: Vec<_> = second_chunk
+        .iter()
+        .map(|id| serde_json::json!({"item_id": *id, "name": format!("Item {id}")}))
+        .collect();
+
+    Mock::given(method("POST"))
+        .and(path("/corporations/98000001/assets/names/"))
+        .and(body_json(serde_json::json!(first_chunk.clone())))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&first_response))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    Mock::given(method("POST"))
+        .and(path("/corporations/98000001/assets/names/"))
+        .and(body_json(serde_json::json!(second_chunk.clone())))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&second_response))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let names = client.corp_asset_names(98000001, &ids).await.unwrap();
+
+    assert_eq!(names.len(), 1001);
+    assert_eq!(names[0].name, "Item 1");
+    assert_eq!(names[1000].name, "Item 1001");
+}
+
+#[tokio::test]
+async fn test_corp_asset_locations_batches_large_payloads() {
+    let server = MockServer::start().await;
+
+    let ids: Vec<i64> = (1..=1001).collect();
+    let first_chunk = ids[..1000].to_vec();
+    let second_chunk = ids[1000..].to_vec();
+    let first_response: Vec<_> = first_chunk
+        .iter()
+        .map(|id| serde_json::json!({"item_id": *id, "position": {"x": *id as f64, "y": 1.0, "z": 2.0}}))
+        .collect();
+    let second_response: Vec<_> = second_chunk
+        .iter()
+        .map(|id| serde_json::json!({"item_id": *id, "position": {"x": *id as f64, "y": 1.0, "z": 2.0}}))
+        .collect();
+
+    Mock::given(method("POST"))
+        .and(path("/corporations/98000001/assets/locations/"))
+        .and(body_json(serde_json::json!(first_chunk.clone())))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&first_response))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    Mock::given(method("POST"))
+        .and(path("/corporations/98000001/assets/locations/"))
+        .and(body_json(serde_json::json!(second_chunk.clone())))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&second_response))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let locs = client.corp_asset_locations(98000001, &ids).await.unwrap();
+
+    assert_eq!(locs.len(), 1001);
+    assert!((locs[0].position.x - 1.0).abs() < f64::EPSILON);
+    assert!((locs[1000].position.x - 1001.0).abs() < f64::EPSILON);
+}
+
+#[tokio::test]
+async fn test_character_asset_names_empty_is_noop() {
+    let server = MockServer::start().await;
+
+    let client = EsiClient::new().with_base_url(server.uri());
+    let names = client.character_asset_names(91234567, &[]).await.unwrap();
+
+    assert!(names.is_empty());
+}
+
 // ---------------------------------------------------------------------------
 // corp_industry_jobs — paginated GET
 // ---------------------------------------------------------------------------

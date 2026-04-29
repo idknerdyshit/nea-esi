@@ -8,7 +8,7 @@ use crate::{
     EsiWalletJournalEntry, EsiWalletTransaction, Result,
 };
 
-use super::{AFFILIATION_CHUNK_SIZE, ASSET_NAMES_CHUNK_SIZE};
+use super::{AFFILIATION_CHUNK_SIZE, ASSET_ID_CHUNK_SIZE};
 
 impl EsiClient {
     // -----------------------------------------------------------------------
@@ -137,9 +137,10 @@ impl EsiClient {
         character_id: i64,
         item_ids: &[i64],
     ) -> Result<Vec<EsiAssetLocation>> {
-        self.post_json(
+        self.post_chunked_ids_json(
             &format!("/characters/{character_id}/assets/locations/"),
             item_ids,
+            ASSET_ID_CHUNK_SIZE,
         )
         .await
     }
@@ -151,16 +152,12 @@ impl EsiClient {
         character_id: i64,
         item_ids: &[i64],
     ) -> Result<Vec<EsiAssetName>> {
-        if item_ids.is_empty() {
-            return Ok(Vec::new());
-        }
-        let path = format!("/characters/{character_id}/assets/names/");
-        let mut all = Vec::with_capacity(item_ids.len());
-        for chunk in item_ids.chunks(ASSET_NAMES_CHUNK_SIZE) {
-            let batch: Vec<EsiAssetName> = self.post_json(&path, &chunk).await?;
-            all.extend(batch);
-        }
-        Ok(all)
+        self.post_chunked_ids_json(
+            &format!("/characters/{character_id}/assets/names/"),
+            item_ids,
+            ASSET_ID_CHUNK_SIZE,
+        )
+        .await
     }
 
     // -----------------------------------------------------------------------

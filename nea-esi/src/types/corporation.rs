@@ -7,6 +7,7 @@ use super::universe::EsiPosition;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorporationInfo {
     pub name: String,
+    pub ticker: String,
     #[serde(default)]
     pub alliance_id: Option<i64>,
     #[serde(default)]
