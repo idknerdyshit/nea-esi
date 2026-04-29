@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] / [0.1.3] - 2026-04-29
+
+### Added
+- Expose corp ticker on `EsiCorporationInfo` (c80b2e8)
+
+### Fixed
+- Rate-limit deadlock when error budget hits zero with no follow-up reset header (c80b2e8)
+- `character_asset_locations` now chunks at 1000 IDs (previously unchunked, would 4xx above the limit) (c80b2e8)
+
+### Changed
+- **BREAKING:** `EsiCorporationInfo.ticker` is a required field; manually-constructed values must include it (c80b2e8)
+- Add `post_chunked_ids_json` helper and route corp/character asset names + locations through it (c80b2e8)
+- Expand `.gitignore` with grouped Rust/OS/editor/env sections (5faf2fe)
+- Clarify why-style comments in `nea-esi-cli` auth, config, main, token_store (5faf2fe)
+- Pin `nea-esi` dependency in CLI crate via explicit version (ef017f4)
+
 ## [0.7.2] / [0.1.2] - 2026-03-25
 
 ### Fixed

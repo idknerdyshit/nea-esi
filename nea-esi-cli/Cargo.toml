@@ -1,6 +1,6 @@
 [package]
 name = "nea-esi-cli"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2024"
 description = "Interactive CLI for EVE Online's ESI API"
 license = "MIT"
@@ -11,7 +11,7 @@ name = "nea-esi-cli"
 path = "src/main.rs"
 
 [dependencies]
-nea-esi = { version = "0.7.2", path = "../nea-esi" }
+nea-esi = { version = "0.8.0", path = "../nea-esi" }
 tokio = { version = "1", features = ["full"] }
 clap = { version = "4", features = ["derive", "env"] }
 serde = { version = "1", features = ["derive"] }
