@@ -1,13 +1,13 @@
 [package]
 name = "nea-esi"
-version = "0.8.0"
+version = "0.8.1"
 edition = "2024"
 description = "Rate-limited Rust client for EVE Online's ESI (EVE Swagger Interface) API"
 license = "MIT"
 repository = "https://github.com/idknerdyshit/nea-esi"
 keywords = ["eve-online", "esi", "api-client", "eve"]
 categories = ["api-bindings", "games"]
-readme = "../README.md"
+readme = "README.md"
 
 [dependencies]
 reqwest = { version = "0.13", features = ["json", "rustls", "form"] }

@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.1] - 2026-04-29
+
+### Fixed
+- Point `nea-esi` package `readme` at the in-package `README.md` instead of `../README.md`, removing the cargo-publish warning about a path outside the package. The published library README is unchanged.
+
 ## [0.8.0] / [0.1.3] - 2026-04-29
 
 ### Added
