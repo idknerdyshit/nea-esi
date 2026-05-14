@@ -132,14 +132,38 @@ fn format_cell(value: Option<&serde_json::Value>) -> String {
 }
 
 /// Write items as CSV to stdout.
+///
+/// Items are routed through `serde_json::Value` rather than serialized
+/// directly: monetary `Isk` fields use serde_json's arbitrary-precision
+/// representation, which the csv crate's struct serializer cannot consume.
 fn print_csv<T: Serialize>(items: &[T]) -> anyhow::Result<()> {
     if items.is_empty() {
         return Ok(());
     }
 
+    let values: Vec<serde_json::Value> = items
+        .iter()
+        .map(serde_json::to_value)
+        .collect::<Result<_, _>>()?;
+
     let mut wtr = csv::Writer::from_writer(io::stdout().lock());
-    for item in items {
-        wtr.serialize(item)?;
+
+    let headers: Vec<String> = if let serde_json::Value::Object(map) = &values[0] {
+        map.keys().cloned().collect()
+    } else {
+        for value in &values {
+            wtr.write_record([format_cell(Some(value))])?;
+        }
+        wtr.flush()?;
+        return Ok(());
+    };
+
+    wtr.write_record(&headers)?;
+    for value in &values {
+        if let serde_json::Value::Object(map) = value {
+            let row: Vec<String> = headers.iter().map(|h| format_cell(map.get(h))).collect();
+            wtr.write_record(row)?;
+        }
     }
     wtr.flush()?;
     Ok(())

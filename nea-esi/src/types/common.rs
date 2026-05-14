@@ -1,4 +1,39 @@
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::{fmt, ops::Deref};
+
+/// An ISK monetary amount, backed by a fixed-precision decimal so large
+/// wallet balances and prices round-trip exactly (no f64 rounding).
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
+#[serde(transparent)]
+pub struct Isk(#[serde(with = "rust_decimal::serde::arbitrary_precision")] pub Decimal);
+
+impl Deref for Isk {
+    type Target = Decimal;
+    fn deref(&self) -> &Decimal {
+        &self.0
+    }
+}
+
+impl fmt::Display for Isk {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.0, f)
+    }
+}
+
+impl From<Decimal> for Isk {
+    fn from(d: Decimal) -> Self {
+        Self(d)
+    }
+}
+
+impl From<Isk> for Decimal {
+    fn from(i: Isk) -> Self {
+        i.0
+    }
+}
 
 /// Resolved name from POST /universe/names/.
 #[derive(Debug, Clone, Serialize, Deserialize)]

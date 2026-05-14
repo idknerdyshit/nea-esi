@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.9.0] / [0.2.0] - 2026-05-14
+
+### Added
+- `Isk` newtype (`nea-esi/src/types/common.rs`) wrapping `rust_decimal::Decimal` for all monetary values. Deserialized through serde_json's `arbitrary_precision` path so large wallet balances and prices round-trip exactly with no f64 rounding. `Deref`s to `Decimal`, implements `Display`, `Ord`, and `From`/`Into<Decimal>`. (GitHub #2)
+- Re-export `rust_decimal::Decimal` as `nea_esi::Decimal` so consumers can do exact ISK arithmetic without adding the dependency directly.
+
+### Changed
+- **BREAKING:** every monetary field across the API is now `Isk` (or `Option<Isk>`) instead of `f64`: `EsiMarketHistoryEntry` (`average`/`highest`/`lowest`), `EsiMarketOrder.price`, `EsiMarketPrice` (`average_price`/`adjusted_price`), `EsiCharacterOrder` (`price`/`escrow`), `EsiContract` (`price`/`reward`/`collateral`/`buyout`), `EsiContractBid.amount`, `EsiWalletJournalEntry` (`amount`/`balance`/`tax`), `EsiWalletTransaction.unit_price`, `EsiWarParty.isk_destroyed`, `EsiInsuranceLevel` (`cost`/`payout`), `EsiCorpWalletDivision.balance`, `EsiStationInfo.office_rental_cost`, `EsiIndustryJob.cost`, `EsiIndustryFacility.tax`. Non-monetary `f64` fields (standings, security status, mass/volume, dogma values, tax *rates*, cost indices, positions) are unchanged.
+- **BREAKING:** `wallet_balance()` returns `Result<Isk>` instead of `Result<f64>`.
+- **BREAKING:** `compute_best_bid_ask()` returns `(Option<Isk>, Option<Isk>, i64, i64)` instead of `(Option<f64>, Option<f64>, i64, i64)`.
+- `serde_json` now built with `arbitrary_precision`; added `rust_decimal` dependency with `serde-with-arbitrary-precision`.
+- CLI CSV output routes items through `serde_json::Value` rather than serializing structs directly, since the csv crate cannot consume serde_json's arbitrary-precision number representation.
+
 ## [0.8.1] - 2026-04-29
 
 ### Fixed

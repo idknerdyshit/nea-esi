@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use super::misc::EsiFwTotals;
 use super::universe::EsiPosition;
+use crate::Isk;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorporationInfo {
@@ -18,7 +19,7 @@ pub struct EsiCorporationInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiCorpWalletDivision {
     pub division: i32,
-    pub balance: f64,
+    pub balance: Isk,
 }
 
 /// An asset name (from POST /corporations/{}/assets/names/).

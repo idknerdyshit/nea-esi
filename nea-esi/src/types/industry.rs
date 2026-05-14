@@ -1,3 +1,4 @@
+use crate::Isk;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -18,7 +19,7 @@ pub struct EsiIndustryJob {
     pub start_date: DateTime<Utc>,
     pub end_date: DateTime<Utc>,
     #[serde(default)]
-    pub cost: Option<f64>,
+    pub cost: Option<Isk>,
     #[serde(default)]
     pub licensed_runs: Option<i32>,
     #[serde(default)]
@@ -59,7 +60,7 @@ pub struct EsiIndustryFacility {
     pub solar_system_id: i32,
     pub type_id: i32,
     #[serde(default)]
-    pub tax: Option<f64>,
+    pub tax: Option<Isk>,
 }
 
 /// Industry system cost indices.

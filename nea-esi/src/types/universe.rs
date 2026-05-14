@@ -1,3 +1,4 @@
+use crate::Isk;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -125,7 +126,7 @@ pub struct EsiStationInfo {
     #[serde(default)]
     pub reprocessing_stations_take: Option<f64>,
     #[serde(default)]
-    pub office_rental_cost: Option<f64>,
+    pub office_rental_cost: Option<Isk>,
 }
 
 /// Stargate info.

@@ -278,8 +278,14 @@ async fn test_market_prices_no_auth() {
 
     assert_eq!(prices.len(), 2);
     assert_eq!(prices[0].type_id, 34);
-    assert!((prices[0].average_price.unwrap() - 5.25).abs() < f64::EPSILON);
-    assert!((prices[0].adjusted_price.unwrap() - 5.10).abs() < f64::EPSILON);
+    assert_eq!(
+        prices[0].average_price,
+        Some(nea_esi::Isk("5.25".parse().unwrap()))
+    );
+    assert_eq!(
+        prices[0].adjusted_price,
+        Some(nea_esi::Isk("5.10".parse().unwrap()))
+    );
     assert_eq!(prices[1].type_id, 35);
     assert_eq!(prices[1].adjusted_price, None);
 }

@@ -5,7 +5,7 @@ use crate::{
     EsiCompletedOpportunity, EsiContactNotification, EsiCorporationHistoryEntry, EsiFatigue,
     EsiIndustryJob, EsiLocation, EsiLoyaltyPoints, EsiMiningEntry, EsiOnlineStatus,
     EsiPlanetDetail, EsiPlanetSummary, EsiShip, EsiSkillqueueEntry, EsiSkills, EsiStanding,
-    EsiWalletJournalEntry, EsiWalletTransaction, Result,
+    EsiWalletJournalEntry, EsiWalletTransaction, Isk, Result,
 };
 
 use super::{AFFILIATION_CHUNK_SIZE, ASSET_ID_CHUNK_SIZE};
@@ -166,7 +166,7 @@ impl EsiClient {
 
     /// Fetch a character's ISK balance.
     #[tracing::instrument(skip(self))]
-    pub async fn wallet_balance(&self, character_id: i64) -> Result<f64> {
+    pub async fn wallet_balance(&self, character_id: i64) -> Result<Isk> {
         self.get_json(&format!("/characters/{character_id}/wallet/"))
             .await
     }

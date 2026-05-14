@@ -1,3 +1,4 @@
+use crate::Isk;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -25,13 +26,13 @@ pub struct EsiContract {
     #[serde(default)]
     pub date_completed: Option<DateTime<Utc>>,
     #[serde(default)]
-    pub price: Option<f64>,
+    pub price: Option<Isk>,
     #[serde(default)]
-    pub reward: Option<f64>,
+    pub reward: Option<Isk>,
     #[serde(default)]
-    pub collateral: Option<f64>,
+    pub collateral: Option<Isk>,
     #[serde(default)]
-    pub buyout: Option<f64>,
+    pub buyout: Option<Isk>,
     #[serde(default)]
     pub volume: Option<f64>,
     #[serde(default)]
@@ -61,7 +62,7 @@ pub struct EsiContractBid {
     pub bid_id: i64,
     pub bidder_id: i64,
     pub date_bid: DateTime<Utc>,
-    pub amount: f64,
+    pub amount: Isk,
 }
 
 /// A saved ship fitting.

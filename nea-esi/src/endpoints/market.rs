@@ -1,5 +1,6 @@
 use crate::{
-    EsiClient, EsiMarketGroupInfo, EsiMarketHistoryEntry, EsiMarketOrder, EsiMarketPrice, Result,
+    EsiClient, EsiMarketGroupInfo, EsiMarketHistoryEntry, EsiMarketOrder, EsiMarketPrice, Isk,
+    Result,
 };
 
 impl EsiClient {
@@ -77,9 +78,9 @@ impl EsiClient {
 pub fn compute_best_bid_ask(
     orders: &[EsiMarketOrder],
     station_id: i64,
-) -> (Option<f64>, Option<f64>, i64, i64) {
-    let mut best_bid: Option<f64> = None;
-    let mut best_ask: Option<f64> = None;
+) -> (Option<Isk>, Option<Isk>, i64, i64) {
+    let mut best_bid: Option<Isk> = None;
+    let mut best_ask: Option<Isk> = None;
     let mut bid_volume: i64 = 0;
     let mut ask_volume: i64 = 0;
 

@@ -111,7 +111,7 @@ client.get_market_group(market_group_id: i32) -> EsiMarketGroupInfo
 // Filter orders to a station, return (best_bid, best_ask, bid_volume, ask_volume)
 // This is a free function — no &self, no async
 compute_best_bid_ask(orders: &[EsiMarketOrder], station_id: i64)
-    -> (Option<f64>, Option<f64>, i64, i64)
+    -> (Option<Isk>, Option<Isk>, i64, i64)
 ```
 
 **Killmails:**
@@ -173,7 +173,7 @@ client.sovereignty_structures() -> Vec<EsiSovereigntyStructure>
 **Character — Wallet:**
 
 ```rust
-client.wallet_balance(character_id: i64) -> f64
+client.wallet_balance(character_id: i64) -> Isk
 client.wallet_journal(character_id: i64) -> Vec<EsiWalletJournalEntry>  // paginated
 client.wallet_transactions(character_id: i64) -> Vec<EsiWalletTransaction>
 ```
@@ -438,11 +438,13 @@ client.clear_cache().await
 
 ### Response types
 
-**`EsiMarketHistoryEntry`** — `date: NaiveDate`, `average: f64`, `highest: f64`, `lowest: f64`, `volume: i64`, `order_count: i64`
+**`Isk`** — newtype wrapping `rust_decimal::Decimal` (re-exported as `nea_esi::Decimal`) for all monetary fields. Deserialized via serde_json's arbitrary-precision path so large balances and prices round-trip exactly without f64 rounding. `Deref`s to `Decimal`, implements `Display`, `Ord`, and `From`/`Into<Decimal>`.
 
-**`EsiMarketOrder`** — `order_id: i64`, `type_id: i32`, `location_id: i64`, `price: f64`, `volume_remain: i64`, `is_buy_order: bool`, `issued: DateTime<Utc>`, `duration: i32`, `min_volume: i32`, `range: String`
+**`EsiMarketHistoryEntry`** — `date: NaiveDate`, `average: Isk`, `highest: Isk`, `lowest: Isk`, `volume: i64`, `order_count: i64`
 
-**`EsiMarketPrice`** — `type_id: i32`, `average_price: Option<f64>`, `adjusted_price: Option<f64>`
+**`EsiMarketOrder`** — `order_id: i64`, `type_id: i32`, `location_id: i64`, `price: Isk`, `volume_remain: i64`, `is_buy_order: bool`, `issued: DateTime<Utc>`, `duration: i32`, `min_volume: i32`, `range: String`
+
+**`EsiMarketPrice`** — `type_id: i32`, `average_price: Option<Isk>`, `adjusted_price: Option<Isk>`
 
 **`EsiKillmail`** — `killmail_id: i64`, `killmail_time: DateTime<Utc>`, `solar_system_id: i32`, `victim: EsiKillmailVictim`, `attackers: Vec<EsiKillmailAttacker>`
 
@@ -470,7 +472,7 @@ client.clear_cache().await
 
 **`EsiWalletJournalEntry`** — `id: i64`, `date: DateTime<Utc>`, `ref_type: String`, optional: `amount`, `balance`, `description`, `first_party_id`, `second_party_id`, `reason`, `context_id`, `context_id_type`, `tax`, `tax_receiver_id`
 
-**`EsiWalletTransaction`** — `transaction_id: i64`, `date: DateTime<Utc>`, `type_id: i32`, `location_id: i64`, `unit_price: f64`, `quantity: i32`, `client_id: i64`, `is_buy: bool`, `is_personal: bool`, `journal_ref_id: i64`
+**`EsiWalletTransaction`** — `transaction_id: i64`, `date: DateTime<Utc>`, `type_id: i32`, `location_id: i64`, `unit_price: Isk`, `quantity: i32`, `client_id: i64`, `is_buy: bool`, `is_personal: bool`, `journal_ref_id: i64`
 
 **`EsiSkills`** — `skills: Vec<EsiSkill>`, `total_sp: i64`, optional: `unallocated_sp`
 
@@ -488,9 +490,9 @@ client.clear_cache().await
 
 **`EsiContractItem`** — `record_id: i64`, `type_id: i32`, `quantity: i32`, `is_included: bool`, optional: `is_singleton`, `raw_quantity`
 
-**`EsiContractBid`** — `bid_id: i64`, `bidder_id: i64`, `date_bid: DateTime<Utc>`, `amount: f64`
+**`EsiContractBid`** — `bid_id: i64`, `bidder_id: i64`, `date_bid: DateTime<Utc>`, `amount: Isk`
 
-**`EsiCharacterOrder`** — `order_id: i64`, `type_id: i32`, `region_id: i32`, `location_id: i64`, `range: String`, `is_buy_order: bool`, `price: f64`, `volume_total/volume_remain: i32`, `issued: DateTime<Utc>`, `min_volume: i32`, `duration: i32`, optional: `state`, `escrow`, `is_corporation`
+**`EsiCharacterOrder`** — `order_id: i64`, `type_id: i32`, `region_id: i32`, `location_id: i64`, `range: String`, `is_buy_order: bool`, `price: Isk`, `volume_total/volume_remain: i32`, `issued: DateTime<Utc>`, `min_volume: i32`, `duration: i32`, optional: `state`, `escrow: Isk`, `is_corporation`
 
 **`EsiFitting`** — `fitting_id: i64`, `name: String`, `description: String`, `ship_type_id: i32`, `items: Vec<EsiFittingItem>`
 
@@ -530,7 +532,7 @@ client.clear_cache().await
 
 **`EsiPlanetDetail`** — `links/pins/routes: Vec<serde_json::Value>` (complex nested PI structures; typed access deferred)
 
-**`EsiCorpWalletDivision`** — `division: i32`, `balance: f64`
+**`EsiCorpWalletDivision`** — `division: i32`, `balance: Isk`
 
 **`EsiAssetName`** — `item_id: i64`, `name: String`
 
@@ -578,7 +580,7 @@ client.clear_cache().await
 
 **`EsiWar`** — `id: i32`, `declared: DateTime<Utc>`, `mutual/open_for_allies: bool`, `aggressor/defender: EsiWarParty`, optional: `started`, `finished`, `retracted`, default-vec: `allies`
 
-**`EsiWarParty`** — `isk_destroyed: f64`, `ships_killed: i32`, optional: `alliance_id`, `corporation_id`
+**`EsiWarParty`** — `isk_destroyed: Isk`, `ships_killed: i32`, optional: `alliance_id`, `corporation_id`
 
 **`EsiWarAlly`** — optional: `alliance_id`, `corporation_id`
 
@@ -598,7 +600,7 @@ client.clear_cache().await
 
 **`EsiInsurancePrice`** — `type_id: i32`, default-vec: `levels: Vec<EsiInsuranceLevel>`
 
-**`EsiInsuranceLevel`** — `cost: f64`, `name: String`, `payout: f64`
+**`EsiInsuranceLevel`** — `cost: Isk`, `name: String`, `payout: Isk`
 
 **`EsiAllianceHistoryEntry`** — `record_id: i32`, `start_date: DateTime<Utc>`, optional: `alliance_id: i64`, default: `is_deleted: bool`
 

@@ -1,12 +1,13 @@
+use crate::Isk;
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiMarketHistoryEntry {
     pub date: NaiveDate,
-    pub average: f64,
-    pub highest: f64,
-    pub lowest: f64,
+    pub average: Isk,
+    pub highest: Isk,
+    pub lowest: Isk,
     pub volume: i64,
     pub order_count: i64,
 }
@@ -16,7 +17,7 @@ pub struct EsiMarketOrder {
     pub order_id: i64,
     pub type_id: i32,
     pub location_id: i64,
-    pub price: f64,
+    pub price: Isk,
     pub volume_remain: i64,
     pub is_buy_order: bool,
     pub issued: DateTime<Utc>,
@@ -30,9 +31,9 @@ pub struct EsiMarketOrder {
 pub struct EsiMarketPrice {
     pub type_id: i32,
     #[serde(default)]
-    pub average_price: Option<f64>,
+    pub average_price: Option<Isk>,
     #[serde(default)]
-    pub adjusted_price: Option<f64>,
+    pub adjusted_price: Option<Isk>,
 }
 
 /// Market group info.
@@ -57,7 +58,7 @@ pub struct EsiCharacterOrder {
     pub location_id: i64,
     pub range: String,
     pub is_buy_order: bool,
-    pub price: f64,
+    pub price: Isk,
     pub volume_total: i32,
     pub volume_remain: i32,
     pub issued: DateTime<Utc>,
@@ -66,7 +67,7 @@ pub struct EsiCharacterOrder {
     #[serde(default)]
     pub state: Option<String>,
     #[serde(default)]
-    pub escrow: Option<f64>,
+    pub escrow: Option<Isk>,
     #[serde(default)]
     pub is_corporation: Option<bool>,
 }

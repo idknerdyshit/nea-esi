@@ -77,6 +77,10 @@ pub type Result<T> = std::result::Result<T, EsiError>;
 mod types;
 pub use types::*;
 
+/// Re-exported so consumers can do exact ISK arithmetic without depending on
+/// `rust_decimal` directly. [`Isk`] derefs to this.
+pub use rust_decimal::Decimal;
+
 // ---------------------------------------------------------------------------
 // ETag cache
 // ---------------------------------------------------------------------------
@@ -675,10 +679,14 @@ mod tests {
     use super::*;
     use chrono::{DateTime, NaiveDate, Utc};
 
+    fn isk(s: &str) -> Isk {
+        Isk(s.parse().unwrap())
+    }
+
     fn make_order(
         order_id: i64,
         location_id: i64,
-        price: f64,
+        price: Isk,
         volume_remain: i64,
         is_buy: bool,
     ) -> EsiMarketOrder {
@@ -704,7 +712,7 @@ mod tests {
 
     #[test]
     fn test_compute_best_bid_ask_wrong_station() {
-        let orders = vec![make_order(1, 99999, 10.0, 100, true)];
+        let orders = vec![make_order(1, 99999, isk("10"), 100, true)];
         let (bid, ask, bv, av) = compute_best_bid_ask(&orders, JITA_STATION);
         assert_eq!((bid, ask, bv, av), (None, None, 0, 0));
     }
@@ -712,11 +720,11 @@ mod tests {
     #[test]
     fn test_compute_best_bid_ask_buys_only() {
         let orders = vec![
-            make_order(1, JITA_STATION, 10.0, 100, true),
-            make_order(2, JITA_STATION, 12.0, 200, true),
+            make_order(1, JITA_STATION, isk("10"), 100, true),
+            make_order(2, JITA_STATION, isk("12"), 200, true),
         ];
         let (bid, ask, bv, av) = compute_best_bid_ask(&orders, JITA_STATION);
-        assert_eq!(bid, Some(12.0));
+        assert_eq!(bid, Some(isk("12")));
         assert_eq!(ask, None);
         assert_eq!(bv, 300);
         assert_eq!(av, 0);
@@ -725,12 +733,12 @@ mod tests {
     #[test]
     fn test_compute_best_bid_ask_sells_only() {
         let orders = vec![
-            make_order(1, JITA_STATION, 15.0, 50, false),
-            make_order(2, JITA_STATION, 13.0, 75, false),
+            make_order(1, JITA_STATION, isk("15"), 50, false),
+            make_order(2, JITA_STATION, isk("13"), 75, false),
         ];
         let (bid, ask, bv, av) = compute_best_bid_ask(&orders, JITA_STATION);
         assert_eq!(bid, None);
-        assert_eq!(ask, Some(13.0));
+        assert_eq!(ask, Some(isk("13")));
         assert_eq!(bv, 0);
         assert_eq!(av, 125);
     }
@@ -738,14 +746,14 @@ mod tests {
     #[test]
     fn test_compute_best_bid_ask_mixed() {
         let orders = vec![
-            make_order(1, JITA_STATION, 10.0, 100, true),
-            make_order(2, JITA_STATION, 12.0, 200, true),
-            make_order(3, JITA_STATION, 15.0, 50, false),
-            make_order(4, JITA_STATION, 13.0, 75, false),
+            make_order(1, JITA_STATION, isk("10"), 100, true),
+            make_order(2, JITA_STATION, isk("12"), 200, true),
+            make_order(3, JITA_STATION, isk("15"), 50, false),
+            make_order(4, JITA_STATION, isk("13"), 75, false),
         ];
         let (bid, ask, bv, av) = compute_best_bid_ask(&orders, JITA_STATION);
-        assert_eq!(bid, Some(12.0));
-        assert_eq!(ask, Some(13.0));
+        assert_eq!(bid, Some(isk("12")));
+        assert_eq!(ask, Some(isk("13")));
         assert_eq!(bv, 300);
         assert_eq!(av, 125);
     }
@@ -754,14 +762,14 @@ mod tests {
     fn test_compute_best_bid_ask_multi_station() {
         let amarr: i64 = 60008494;
         let orders = vec![
-            make_order(1, JITA_STATION, 10.0, 100, true),
-            make_order(2, amarr, 99.0, 999, true),
-            make_order(3, JITA_STATION, 15.0, 50, false),
-            make_order(4, amarr, 1.0, 999, false),
+            make_order(1, JITA_STATION, isk("10"), 100, true),
+            make_order(2, amarr, isk("99"), 999, true),
+            make_order(3, JITA_STATION, isk("15"), 50, false),
+            make_order(4, amarr, isk("1"), 999, false),
         ];
         let (bid, ask, bv, av) = compute_best_bid_ask(&orders, JITA_STATION);
-        assert_eq!(bid, Some(10.0));
-        assert_eq!(ask, Some(15.0));
+        assert_eq!(bid, Some(isk("10")));
+        assert_eq!(ask, Some(isk("15")));
         assert_eq!(bv, 100);
         assert_eq!(av, 50);
     }
@@ -913,7 +921,7 @@ mod tests {
         let json = r#"{"date":"2026-03-01","average":5.25,"highest":5.27,"lowest":5.11,"volume":72016862,"order_count":2267}"#;
         let entry: EsiMarketHistoryEntry = serde_json::from_str(json).unwrap();
         assert_eq!(entry.date, NaiveDate::from_ymd_opt(2026, 3, 1).unwrap());
-        assert!((entry.average - 5.25).abs() < f64::EPSILON);
+        assert_eq!(entry.average, isk("5.25"));
         assert_eq!(entry.volume, 72016862);
         assert_eq!(entry.order_count, 2267);
     }
@@ -970,7 +978,7 @@ mod tests {
         let json = r#"{"type_id": 34, "average_price": 5.25}"#;
         let price: EsiMarketPrice = serde_json::from_str(json).unwrap();
         assert_eq!(price.type_id, 34);
-        assert!((price.average_price.unwrap() - 5.25).abs() < f64::EPSILON);
+        assert_eq!(price.average_price, Some(isk("5.25")));
         assert_eq!(price.adjusted_price, None);
     }
 
@@ -1545,7 +1553,7 @@ mod tests {
         assert_eq!(job.activity_id, 1);
         assert_eq!(job.status, "active");
         assert_eq!(job.runs, 10);
-        assert!((job.cost.unwrap() - 1500.50).abs() < f64::EPSILON);
+        assert_eq!(job.cost, Some(isk("1500.50")));
     }
 
     #[test]
@@ -1591,7 +1599,7 @@ mod tests {
         assert_eq!(c.status, "outstanding");
         assert!(!c.for_corporation);
         assert_eq!(c.title, Some("Selling stuff".to_string()));
-        assert!((c.price.unwrap() - 1000000.0).abs() < f64::EPSILON);
+        assert_eq!(c.price, Some(isk("1000000.0")));
     }
 
     #[test]
@@ -1620,7 +1628,7 @@ mod tests {
         }"#;
         let bid: EsiContractBid = serde_json::from_str(json).unwrap();
         assert_eq!(bid.bid_id, 555);
-        assert!((bid.amount - 5000000.0).abs() < f64::EPSILON);
+        assert_eq!(bid.amount, isk("5000000.0"));
     }
 
     #[test]
@@ -1647,7 +1655,7 @@ mod tests {
         assert_eq!(order.volume_total, 500000);
         assert_eq!(order.volume_remain, 250000);
         assert_eq!(order.state, None);
-        assert!((order.escrow.unwrap() - 1282500.0).abs() < f64::EPSILON);
+        assert_eq!(order.escrow, Some(isk("1282500.0")));
     }
 
     #[test]
@@ -1670,8 +1678,8 @@ mod tests {
         let entry: EsiWalletJournalEntry = serde_json::from_str(json).unwrap();
         assert_eq!(entry.id, 123456789);
         assert_eq!(entry.ref_type, "market_transaction");
-        assert!((entry.amount.unwrap() - (-1500000.50)).abs() < f64::EPSILON);
-        assert!((entry.balance.unwrap() - 98500000.00).abs() < f64::EPSILON);
+        assert_eq!(entry.amount, Some(isk("-1500000.50")));
+        assert_eq!(entry.balance, Some(isk("98500000.00")));
         assert_eq!(entry.description, Some("Market: Tritanium".to_string()));
         assert_eq!(entry.first_party_id, Some(91234567));
         assert_eq!(entry.second_party_id, Some(92345678));
@@ -1774,9 +1782,32 @@ mod tests {
         assert_eq!(tx.transaction_id, 5678901234);
         assert_eq!(tx.type_id, 34);
         assert_eq!(tx.location_id, JITA_STATION);
-        assert!((tx.unit_price - 5.25).abs() < f64::EPSILON);
+        assert_eq!(tx.unit_price, isk("5.25"));
         assert_eq!(tx.quantity, 100000);
         assert!(tx.is_buy);
         assert!(tx.is_personal);
+    }
+
+    /// Regression guard for GitHub #2: a fractional ISK value above ~10
+    /// trillion cannot be represented exactly by f64. This must round-trip
+    /// exactly through the `Isk` / `arbitrary_precision` path — the test
+    /// fails if the `serde(with = ...)` attribute or the `arbitrary_precision`
+    /// cargo features are dropped.
+    #[test]
+    fn test_isk_exact_precision_large_fractional() {
+        let json = r#"{
+            "id": 1,
+            "date": "2026-01-01T00:00:00Z",
+            "ref_type": "player_donation",
+            "balance": 12345678901234.57
+        }"#;
+        let entry: EsiWalletJournalEntry = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            entry.balance,
+            Some(Isk("12345678901234.57".parse().unwrap()))
+        );
+        // Round-trips back to the exact same JSON number.
+        let reser = serde_json::to_string(&entry).unwrap();
+        assert!(reser.contains("12345678901234.57"));
     }
 }

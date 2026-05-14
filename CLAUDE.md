@@ -6,8 +6,8 @@ Rate-limited Rust client library and interactive CLI for EVE Online's ESI (EVE S
 
 ```
 nea-esi/           # Workspace root
-├── nea-esi/       # Library crate (v0.8.1) - async ESI client with OAuth2 PKCE, rate limiting, pagination
-└── nea-esi-cli/   # Binary crate (v0.1.3) - interactive CLI with REPL, multiple output formats
+├── nea-esi/       # Library crate (v0.9.0) - async ESI client with OAuth2 PKCE, rate limiting, pagination
+└── nea-esi-cli/   # Binary crate (v0.2.0) - interactive CLI with REPL, multiple output formats
 ```
 
 ## Build & Test

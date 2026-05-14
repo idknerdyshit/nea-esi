@@ -1,3 +1,4 @@
+use crate::Isk;
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -23,9 +24,9 @@ pub struct EsiWalletJournalEntry {
     pub date: DateTime<Utc>,
     pub ref_type: String,
     #[serde(default)]
-    pub amount: Option<f64>,
+    pub amount: Option<Isk>,
     #[serde(default)]
-    pub balance: Option<f64>,
+    pub balance: Option<Isk>,
     #[serde(default)]
     pub description: Option<String>,
     #[serde(default)]
@@ -39,7 +40,7 @@ pub struct EsiWalletJournalEntry {
     #[serde(default)]
     pub context_id_type: Option<String>,
     #[serde(default)]
-    pub tax: Option<f64>,
+    pub tax: Option<Isk>,
     #[serde(default)]
     pub tax_receiver_id: Option<i64>,
 }
@@ -51,7 +52,7 @@ pub struct EsiWalletTransaction {
     pub date: DateTime<Utc>,
     pub type_id: i32,
     pub location_id: i64,
-    pub unit_price: f64,
+    pub unit_price: Isk,
     pub quantity: i32,
     pub client_id: i64,
     pub is_buy: bool,
@@ -230,7 +231,7 @@ pub struct EsiWar {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiWarParty {
-    pub isk_destroyed: f64,
+    pub isk_destroyed: Isk,
     pub ships_killed: i32,
     #[serde(default)]
     pub alliance_id: Option<i64>,
@@ -309,9 +310,9 @@ pub struct EsiInsurancePrice {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EsiInsuranceLevel {
-    pub cost: f64,
+    pub cost: Isk,
     pub name: String,
-    pub payout: f64,
+    pub payout: Isk,
 }
 
 /// A personal mining ledger entry.

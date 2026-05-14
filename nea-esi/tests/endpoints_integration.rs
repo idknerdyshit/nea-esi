@@ -841,16 +841,20 @@ async fn test_character_attributes() {
 async fn test_wallet_balance() {
     let server = MockServer::start().await;
 
+    // Raw body with a value f64 cannot represent exactly — proves the
+    // arbitrary-precision path round-trips ISK losslessly.
     Mock::given(method("GET"))
         .and(path("/characters/91234567/wallet/"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!(123456789.50)))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_raw("123456789012345.67", "application/json"),
+        )
         .mount(&server)
         .await;
 
     let client = EsiClient::new().with_base_url(server.uri());
     let balance = client.wallet_balance(91234567).await.unwrap();
 
-    assert!((balance - 123456789.50).abs() < f64::EPSILON);
+    assert_eq!(balance, nea_esi::Isk("123456789012345.67".parse().unwrap()));
 }
 
 // ---------------------------------------------------------------------------
@@ -977,7 +981,10 @@ async fn test_corp_wallet_balances() {
 
     assert_eq!(divs.len(), 2);
     assert_eq!(divs[0].division, 1);
-    assert!((divs[0].balance - 123456789.50).abs() < f64::EPSILON);
+    assert_eq!(
+        divs[0].balance,
+        nea_esi::Isk("123456789.50".parse().unwrap())
+    );
 }
 
 // ---------------------------------------------------------------------------
